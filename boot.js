@@ -38,6 +38,7 @@
     await patch("core-safety","core-safety-patch.js");
     await patch("enhancements","enhancements.js");
     await patch("clipboard","clipboard-polish.js");
+    await patch("grid-layout","grid-layout.js");
     setStep("stepPatches","ok","Correções concluídas");setProgress(88);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     if(!looksFunctional()){fail("O motor carregou, mas a interface essencial não foi encontrada.");return;}
