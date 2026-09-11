@@ -329,3 +329,21 @@ body.organize-mode .search-field{opacity:.6}
   width:25px!important;
   height:25px!important;
 }
+
+
+/* 1.4.7 Beta — menu de opções mais compacto */
+#libraryMenu.popover > a,
+#libraryMenu.popover > button{
+  min-height:46px!important;
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+}
+#libraryMenu .menu-icon-row{
+  gap:11px!important;
+}
+#libraryMenu .grid-layout-setting{
+  margin-top:0!important;
+  margin-bottom:2px!important;
+  padding-top:7px!important;
+  padding-bottom:9px!important;
+}
