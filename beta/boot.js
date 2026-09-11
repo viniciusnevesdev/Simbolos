@@ -37,6 +37,7 @@
     setProgress(66);setStep("stepPatches","running","Aplicando correções");
     await patch("core-safety","core-safety-patch.js");
     await patch("enhancements","enhancements.js");
+    await patch("grid-layout","../grid-layout.js");
     await patch("clipboard","clipboard-polish.js");
     setStep("stepPatches","ok","Correções concluídas");setProgress(88);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
