@@ -184,3 +184,9 @@ body.organize-mode .search-field{opacity:.6}
   top:max(18px,calc(env(safe-area-inset-top) + 10px))!important;
   right:max(18px,calc((100vw - 980px)/2 + 18px))!important;
 }
+
+
+/* 1.4.3 Beta — recolher/expandir grupos */
+#symbolGrid .family-grid[hidden]{
+  display:none!important;
+}
