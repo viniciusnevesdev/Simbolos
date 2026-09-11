@@ -303,3 +303,29 @@ body.organize-mode .search-field{opacity:.6}
 @media(prefers-color-scheme:dark){
   #duplicateSaveAnywayButton{color:#ff9f0a}
 }
+
+
+/* 1.4.6 Beta — ícones no menu da biblioteca */
+#libraryMenu .menu-icon-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:13px!important;
+}
+#libraryMenu .menu-icon-row .menu-item-icon{
+  width:24px!important;
+  height:24px!important;
+  flex:0 0 24px!important;
+  overflow:visible;
+}
+#libraryMenu .menu-icon-row .menu-item-icon path{
+  fill:currentColor!important;
+  fill-opacity:.85!important;
+}
+#libraryMenu .menu-icon-row span{
+  min-width:0;
+  flex:1 1 auto;
+}
+#libraryMenu #organizeButton .organize-menu-icon{
+  width:25px!important;
+  height:25px!important;
+}
