@@ -190,3 +190,27 @@ body.organize-mode .search-field{opacity:.6}
 #symbolGrid .family-grid[hidden]{
   display:none!important;
 }
+
+
+/* 1.4.4 Beta — tipografia compacta conforme densidade */
+#symbolGrid .card-info h2{
+  line-height:1.05!important;
+  letter-spacing:-.025em!important;
+  font-weight:650!important;
+}
+#symbolGrid[data-columns="3"] .card-info{padding:7px 6px 6px!important}
+#symbolGrid[data-columns="3"] .card-info h2{font-size:10.5px!important}
+
+#symbolGrid[data-columns="4"] .card-info{padding:6px 4px 5px!important}
+#symbolGrid[data-columns="4"] .card-info h2{font-size:8.8px!important}
+
+#symbolGrid[data-columns="5"] .card-info{padding:5px 3px 4px!important}
+#symbolGrid[data-columns="5"] .card-info h2{font-size:7.4px!important}
+
+#symbolGrid[data-columns="6"] .card-info{padding:4px 2px 3px!important}
+#symbolGrid[data-columns="6"] .card-info h2{font-size:6.6px!important}
+
+#symbolGrid[data-columns="5"] .card-info h2,
+#symbolGrid[data-columns="6"] .card-info h2{
+  text-overflow:clip!important;
+}
