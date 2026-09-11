@@ -46,6 +46,7 @@ organizerBar.innerHTML=`
   </div>
   <div class="organizer-group-tools">
     <input id="organizerFamilyInput" class="organizer-family-input" type="text" maxlength="40" placeholder="Grupo" autocomplete="off" aria-autocomplete="list" aria-controls="organizerFamilyMatches">
+    <datalist id="organizerFamilySuggestions" hidden></datalist>
     <div id="organizerFamilyMatches" class="organizer-family-matches" role="listbox" hidden></div>
     <button id="organizerApplyFamilyButton" class="organizer-add-family" type="button">Adicionar ao grupo</button>
     <button id="organizerRemoveFamilyButton" class="organizer-remove-family" type="button" hidden>Tirar do grupo</button>
