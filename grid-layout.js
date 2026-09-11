@@ -19,8 +19,16 @@
 #symbolGrid.symbol-grid{
   --grid-columns:2;
   --grid-gap:12px;
-  grid-template-columns:repeat(var(--grid-columns),minmax(0,1fr))!important;
-  gap:var(--grid-gap)!important;
+  display:block!important;
+}
+#symbolGrid .family-section{margin:0 0 22px}
+#symbolGrid .family-heading{width:100%;min-height:42px;padding:5px 2px 9px;border:0;background:transparent;display:flex;align-items:center;justify-content:space-between;text-align:left;font-size:19px;font-weight:750;letter-spacing:-.025em}
+#symbolGrid .family-arrow{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--soft);font-size:18px;transition:transform .18s ease}
+#symbolGrid .family-section.collapsed .family-arrow{transform:rotate(-90deg)}
+#symbolGrid .family-grid{
+  display:grid;
+  grid-template-columns:repeat(var(--grid-columns),minmax(0,1fr));
+  gap:var(--grid-gap);
 }
 #symbolGrid .symbol-card{min-width:0;transition:border-radius .18s ease,transform .18s ease}
 #symbolGrid .card-preview{
@@ -30,29 +38,36 @@
   padding:clamp(6px,10%,25px)!important;
 }
 #symbolGrid .card-preview svg{
-  width:min(62px,60%)!important;
-  height:min(62px,60%)!important;
-  max-width:60%!important;
-  max-height:60%!important;
+  width:min(81px,78%)!important;
+  height:min(81px,78%)!important;
+  max-width:78%!important;
+  max-height:78%!important;
 }
+#symbolGrid .card-meta{display:none!important}
+#symbolGrid .card-info h2{font-size:13.5px}
+#symbolGrid .card-actions{grid-template-columns:minmax(0,1fr)!important;gap:7px}
+#symbolGrid .copy-button{width:calc(100% - 20px);height:38px;margin:0 10px;border-radius:12px;background:var(--accent);color:#fff;font-size:12px;white-space:nowrap}
+#symbolGrid .download-button{width:calc(100% - 20px);height:32px;margin:0 10px 10px}
 #symbolGrid[data-columns="3"]{--grid-gap:10px}
 #symbolGrid[data-columns="3"] .card-info{padding:10px 10px 8px}
-#symbolGrid[data-columns="3"] .card-info h2{font-size:13px}
+#symbolGrid[data-columns="3"] .card-info h2{font-size:11.5px}
 #symbolGrid[data-columns="3"] .card-meta{font-size:10px}
-#symbolGrid[data-columns="3"] .copy-button{width:calc(100% - 16px);height:33px;margin:0 8px 8px;font-size:12px}
+#symbolGrid[data-columns="3"] .copy-button{width:calc(100% - 16px);height:35px;margin:0 8px;font-size:11px}
+#symbolGrid[data-columns="3"] .download-button{width:calc(100% - 16px);margin:0 8px 8px}
 
 #symbolGrid[data-columns="4"]{--grid-gap:8px}
 #symbolGrid[data-columns="4"] .symbol-card{border-radius:16px}
 #symbolGrid[data-columns="4"] .card-info{padding:8px 8px 6px}
-#symbolGrid[data-columns="4"] .card-info h2{font-size:11.5px}
+#symbolGrid[data-columns="4"] .card-info h2{font-size:10px}
 #symbolGrid[data-columns="4"] .card-meta{display:none}
-#symbolGrid[data-columns="4"] .copy-button{width:calc(100% - 12px);height:30px;margin:0 6px 6px;gap:5px;font-size:11px}
+#symbolGrid[data-columns="4"] .copy-button{width:calc(100% - 12px);height:32px;margin:0 6px;gap:5px;font-size:10px}
 #symbolGrid[data-columns="4"] .copy-button svg{width:14px;height:14px}
+#symbolGrid[data-columns="4"] .download-button{width:calc(100% - 12px);height:29px;margin:0 6px 6px;font-size:10px}
 
 #symbolGrid[data-columns="5"]{--grid-gap:6px}
 #symbolGrid[data-columns="5"] .symbol-card{border-radius:13px}
 #symbolGrid[data-columns="5"] .card-info{padding:6px 6px 5px}
-#symbolGrid[data-columns="5"] .card-info h2{font-size:10px}
+#symbolGrid[data-columns="5"] .card-info h2{font-size:8.5px}
 #symbolGrid[data-columns="5"] .card-meta{display:none}
 #symbolGrid[data-columns="5"] .copy-button{position:relative;width:calc(100% - 10px);height:28px;margin:0 5px 5px;border-radius:9px;gap:0}
 #symbolGrid[data-columns="5"] .copy-button svg{width:14px;height:14px}
@@ -62,7 +77,7 @@
 #symbolGrid[data-columns="6"]{--grid-gap:5px}
 #symbolGrid[data-columns="6"] .symbol-card{border-radius:11px}
 #symbolGrid[data-columns="6"] .card-info{padding:5px 5px 4px}
-#symbolGrid[data-columns="6"] .card-info h2{font-size:9px}
+#symbolGrid[data-columns="6"] .card-info h2{font-size:8px}
 #symbolGrid[data-columns="6"] .card-meta{display:none}
 #symbolGrid[data-columns="6"] .copy-button{position:relative;width:calc(100% - 8px);height:26px;margin:0 4px 4px;border-radius:8px;gap:0}
 #symbolGrid[data-columns="6"] .copy-button svg{width:13px;height:13px}
