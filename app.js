@@ -12,10 +12,16 @@ const els = {
   copyDialog: $("#copyVariantsDialog"), copyTitle: $("#copyVariantsTitle"), copyList: $("#copyVariantsList"), closeCopyDialog: $("#closeCopyVariantsButton"), info: $("#infoDialog"), closeInfo: $("#closeInfoButton"), toast: $("#toast"), template: $("#symbolCardTemplate")
 };
 
+const familyLabel=document.createElement("label"),familyInput=document.createElement("input"),familyList=document.createElement("datalist");
+familyLabel.className="field-label field-spaced";familyLabel.htmlFor="familyInput";familyLabel.textContent="Família";
+familyInput.id="familyInput";familyInput.className="text-input";familyInput.type="text";familyInput.maxLength=40;familyInput.placeholder="Ex.: Alimentação (vazio = Outros)";familyInput.setAttribute("list","familySuggestions");
+familyList.id="familySuggestions";els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);els.family=familyInput;els.familyList=familyList;
+
 let items = loadItems();
 let draft = null;
 let activeVariantId = null;
 let toastTimer = null;
+const collapsedFamilies=new Set();
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#111111", cleanup:true, strokeOverride:null }; }
@@ -28,6 +34,7 @@ function normalizeItem(item){
     if(!item.variants.length)return null;
     item.id=typeof item.id==="string"&&item.id?item.id:uid();
     item.name=typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título";
+    item.family=typeof item.family==="string"?item.family.trim().slice(0,40):"";
     item.createdAt=typeof item.createdAt==="string"?item.createdAt:new Date().toISOString();
     item.updatedAt=typeof item.updatedAt==="string"?item.updatedAt:new Date().toISOString();
     item.defaultVariantId = item.variants.some(v=>v.id===item.defaultVariantId) ? item.defaultVariantId : item.variants[0].id;
@@ -35,7 +42,7 @@ function normalizeItem(item){
   }
   if (typeof item.originalSvg === "string") {
     const v = { id:uid(), label:"Padrão", originalSvg:item.originalSvg, finalSvg:typeof item.finalSvg==="string"?item.finalSvg:item.originalSvg, options:normalizeOptions(item.options), createdAt:typeof item.createdAt==="string"?item.createdAt:new Date().toISOString(), updatedAt:typeof item.updatedAt==="string"?item.updatedAt:new Date().toISOString() };
-    return { id:typeof item.id==="string"&&item.id?item.id:uid(), name:typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título", variants:[v], defaultVariantId:v.id, createdAt:v.createdAt, updatedAt:v.updatedAt };
+    return { id:typeof item.id==="string"&&item.id?item.id:uid(), name:typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título", family:typeof item.family==="string"?item.family.trim().slice(0,40):"", variants:[v], defaultVariantId:v.id, createdAt:v.createdAt, updatedAt:v.updatedAt };
   }
   return null;
 }
@@ -124,8 +131,18 @@ function updateEditor(){
 function defaultVariant(item){ return item.variants.find(v=>v.id===item.defaultVariantId)||item.variants[0]; }
 function previewMarkup(svg){ const parsed=parseSvg(svg); if(!parsed.ok)return""; const root=sanitize(parsed.root,true); root.setAttribute("width","62");root.setAttribute("height","62");return serializeSvg(root); }
 function render(){
-  const q=els.search.value.trim().toLocaleLowerCase("pt-BR"),filtered=items.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(q)||item.variants.some(v=>v.label.toLocaleLowerCase("pt-BR").includes(q))); els.grid.innerHTML="";
-  filtered.forEach(item=>{ const node=els.template.content.cloneNode(true),main=node.querySelector(".symbol-main"),copy=node.querySelector(".copy-button"),download=node.querySelector(".download-button"),def=defaultVariant(item); node.querySelector(".card-preview").innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||""); node.querySelector("h2").textContent=item.name; node.querySelector(".card-meta").textContent=item.variants.length===1?def.label:`${item.variants.length} versões · ${def.label} padrão`; main.addEventListener("click",()=>openEditor(item.id)); copy.querySelector("span").textContent=item.variants.length>1?"Copiar ▾":"Copiar"; copy.addEventListener("click",async e=>{e.stopPropagation(); if(item.variants.length>1)return openVariantChooser(item,"copy"); await copyVariant(item,def);}); download.addEventListener("click",e=>{e.stopPropagation(); if(item.variants.length>1)return openVariantChooser(item,"download"); downloadSvg(item,def);}); els.grid.appendChild(node); });
+  const q=els.search.value.trim().toLocaleLowerCase("pt-BR"),filtered=items.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q)||item.variants.some(v=>v.label.toLocaleLowerCase("pt-BR").includes(q))); els.grid.innerHTML="";
+  const named=[...new Set(filtered.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")),families=[...named,"Outros"];
+  families.forEach(family=>{
+    const members=filtered.filter(item=>family==="Outros"?!item.family:item.family===family);if(!members.length)return;
+    const section=document.createElement("section"),heading=document.createElement("button"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"__others__":family;
+    section.className="family-section";heading.className="family-heading";heading.type="button";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";heading.append(title,arrow);inner.className="family-grid";
+    const setExpanded=expanded=>{heading.setAttribute("aria-expanded",String(expanded));heading.setAttribute("aria-label",`${expanded?"Recolher":"Expandir"} família ${family}`);inner.hidden=!expanded;section.classList.toggle("collapsed",!expanded);};
+    setExpanded(!collapsedFamilies.has(key));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(key);else collapsedFamilies.delete(key);setExpanded(!expanded);});
+    members.forEach(item=>{const node=els.template.content.cloneNode(true),main=node.querySelector(".symbol-main"),copy=node.querySelector(".copy-button"),download=node.querySelector(".download-button"),def=defaultVariant(item);node.querySelector(".card-preview").innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||"");node.querySelector("h2").textContent=item.name;main.addEventListener("click",()=>openEditor(item.id));copy.querySelector("span").textContent="Código SVG";copy.addEventListener("click",async e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});download.addEventListener("click",e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"download");downloadSvg(item,def);});inner.appendChild(node);});
+    section.append(heading,inner);els.grid.appendChild(section);
+  });
+  els.familyList.innerHTML="";[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(family=>{const option=document.createElement("option");option.value=family;els.familyList.appendChild(option);});
   els.count.textContent=`${items.length} ${items.length===1?"símbolo":"símbolos"}`; els.empty.hidden=items.length!==0; els.noResults.hidden=!(items.length>0&&filtered.length===0); els.grid.hidden=filtered.length===0; els.clearSearch.style.display=q?"grid":"none";
 }
 function svgFilename(item,variant){ const raw=[item.name,variant.label].filter(Boolean).join("-").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,""); return `${raw||"simbolo"}.svg`; }
@@ -133,13 +150,13 @@ function downloadSvg(item,variant){ const code=variant.finalSvg||variant.origina
 async function copyVariant(item,variant){ try{await copyText(variant.finalSvg||variant.originalSvg);showToast(`“${item.name} · ${variant.label}” copiado`);}catch{showToast("Não foi possível copiar");} }
 function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els.copyList.innerHTML=""; item.variants.forEach(v=>{ const b=document.createElement("button"),details=document.createElement("span"),strong=document.createElement("strong"),small=document.createElement("small"),action=document.createElement("span"); b.type="button";strong.textContent=v.label;small.textContent=`${v.id===item.defaultVariantId?"Padrão · ":""}${v.options?.colorMode==="currentColor"?"currentColor":"SVG"}`;action.textContent=mode==="download"?"Salvar SVG":"Copiar";details.append(strong,small);b.append(details,action);b.addEventListener("click",async()=>{if(mode==="download")downloadSvg(item,v);else await copyVariant(item,v);els.copyDialog.close();});els.copyList.appendChild(b); }); els.copyDialog.showModal(); }
 function openEditor(id=null){
-  if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.deleteSymbol.hidden=false; }
-  else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.deleteSymbol.hidden=true; }
+  if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.deleteSymbol.hidden=false; }
+  else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.deleteSymbol.hidden=true; }
   activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#111111"; loadVariantToUI(activeVariantId); els.editor.showModal(); document.body.classList.add("dialog-open");
 }
 function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
 function validateDraft(){
-  const name=els.name.value.trim(); if(!name)return {ok:false,error:"Dê um título ao símbolo",focus:els.name}; stashCurrent(); draft.name=name;
+  const name=els.name.value.trim(); if(!name)return {ok:false,error:"Dê um título ao símbolo",focus:els.name}; stashCurrent(); draft.name=name; draft.family=els.family.value.trim().slice(0,40);
   for(const v of draft.variants){ if(!v.label.trim())return {ok:false,error:"Dê um nome para cada versão"}; const result=transformSvg(v.originalSvg,v.options); if(!result.ok)return {ok:false,error:`${v.label}: ${result.error}`}; v.finalSvg=result.output; }
   return {ok:true};
 }
