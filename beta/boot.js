@@ -24,7 +24,6 @@
   function fail(message){setProgress(100);if(status)status.textContent="O app não conseguiu concluir a inicialização.";if(failure){failure.hidden=false;failure.querySelector("strong").textContent=message;}setStep("stepInterface","error","Falha detectada");document.documentElement.dataset.boot="failed";}
   const assetUrl=file=>cfg.assetRoot+file+"?v="+encodeURIComponent(cfg.release||Date.now());
   async function patch(name,file){const t=performance.now();try{await loadScript(assetUrl(file),3500);logs.timings[name]=Math.round(performance.now()-t);return true;}catch(e){logs.errors.push({type:"patch",name,message:String(e.message||e)});return false;}}
-  const protectedLaunchGate=()=>cfg.safeLaunchGate===true&&new URLSearchParams(location.search).get("launch")!=="1";
   async function run(){
     document.documentElement.dataset.env=cfg.env;document.documentElement.dataset.boot="running";
     const release=$("releaseBadge"),env=$("environmentBadge");if(release)release.textContent=`v${cfg.release}`;if(env)env.textContent=cfg.label||cfg.env;
@@ -32,25 +31,14 @@
     const maintenance=withTimeout(cleanRuntime(),1800,"runtime").then(r=>{logs.runtime=r;if(r?.timedOut)setStep("stepWeb","warn","Limpeza em segundo plano");else setStep("stepWeb","ok",r.registrations||r.caches?"Runtime antigo removido":"Ambiente limpo");});
     setStep("stepWeb","running","Verificando runtime");
     const storage=await storageCheck();logs.storage=storage;setStep("stepData",storage.localStorage?"ok":"warn",storage.localStorage?"Dados locais acessíveis":"Storage com restrição");setProgress(30);
-    if(protectedLaunchGate()){
-      if(status)status.textContent="Modo de proteção ativo. Faça um backup antes de abrir o aplicativo.";
-      setStep("stepEngine","warn","Carregamento pausado para proteger seus dados");
-      setStep("stepPatches","warn","Aguardando sua confirmação");
-      setStep("stepInterface","warn","Use “Exportar backup agora” primeiro");
-      setProgress(38);
-      document.documentElement.dataset.boot="rescue";
-      return;
-    }
     try{await loadScript(assetUrl("runtime-guard.js"),3000);}catch(e){logs.errors.push({type:"guard",message:String(e.message||e)});}
     setStep("stepEngine","running","Carregando motor");setProgress(42);
     const coreStart=performance.now();
     try{await loadScript(assetUrl("app.js"),5500);logs.timings.app=Math.round(performance.now()-coreStart);setStep("stepEngine","ok","Motor carregado");}catch(e){logs.errors.push({type:"core",message:String(e.message||e)});fail("Falha ao carregar app.js. Use Diagnóstico ou Modo Seguro.");return;}
-    setProgress(66);setStep("stepPatches","running","Aplicando correções");
-    await patch("core-safety","core-safety-patch.js");
-    await patch("enhancements","enhancements.js");
-    await patch("grid-layout","../grid-layout.js");
+    setProgress(66);setStep("stepPatches","running","Carregando interface");
     await patch("clipboard","clipboard-polish.js");
-    setStep("stepPatches","ok","Correções concluídas");setProgress(88);
+    await patch("grid-layout","../grid-layout.js");
+    setStep("stepPatches","ok","Interface concluída");setProgress(88);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     if(!looksFunctional()){fail("O motor carregou, mas a interface essencial não foi encontrada.");return;}
     setStep("stepInterface","ok","Interface funcional");setProgress(100);logs.timings.total=Math.round(performance.now()-started);document.documentElement.dataset.boot="ready";
