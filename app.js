@@ -61,8 +61,8 @@ const organizerApplyFamily=document.getElementById("organizerApplyFamilyButton")
 const organizerRemoveFamily=document.getElementById("organizerRemoveFamilyButton");
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
-function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#111111", cleanup:true, strokeOverride:null }; }
-function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#111111",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
+function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
+function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#000000",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
 function newVariant(label="Padrão"){ return { id:uid(), label, originalSvg:"", finalSvg:"", options:defaultOptions(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() }; }
 function normalizeItem(item){
   if(!item||typeof item!=="object"||Array.isArray(item))return null;
@@ -136,7 +136,7 @@ function analyzeSvg(root){
 }
 function transformSvg(svg,options){
   const parsed=parseSvg(svg); if(!parsed.ok)return {ok:false,error:parsed.error,output:"",analysis:null};
-  const analysis=analyzeSvg(parsed.root),root=sanitize(parsed.root,options.cleanup!==false); applyPaint(root,options.colorMode||"currentColor",options.fixedColor||"#111111"); applySize(root,options.sizeMode||"24"); applyStroke(root,options.strokeOverride);
+  const analysis=analyzeSvg(parsed.root),root=sanitize(parsed.root,options.cleanup!==false); applyPaint(root,options.colorMode||"currentColor",options.fixedColor||"#000000"); applySize(root,options.sizeMode||"24"); applyStroke(root,options.strokeOverride);
   return {ok:true,output:serializeSvg(root),analysis};
 }
 function getRadio(name){ return document.querySelector(`input[name="${name}"]:checked`)?.value; }
@@ -148,7 +148,7 @@ function stashCurrent(){
   if(els.defaultVariant.checked) draft.defaultVariantId=v.id;
 }
 function loadVariantToUI(id){
-  const v=draft?.variants.find(x=>x.id===id); if(!v)return; activeVariantId=id; els.variantLabel.value=v.label; els.svg.value=v.originalSvg; setRadio("colorMode",v.options.colorMode||"currentColor"); setRadio("sizeMode",v.options.sizeMode||"24"); els.fixedColor.value=v.options.fixedColor||"#111111"; els.cleanup.checked=v.options.cleanup!==false; els.defaultVariant.checked=draft.defaultVariantId===v.id;
+  const v=draft?.variants.find(x=>x.id===id); if(!v)return; activeVariantId=id; els.variantLabel.value=v.label; els.svg.value=v.originalSvg; setRadio("colorMode",v.options.colorMode||"currentColor"); setRadio("sizeMode",v.options.sizeMode||"24"); els.fixedColor.value=v.options.fixedColor||"#000000"; els.cleanup.checked=v.options.cleanup!==false; els.defaultVariant.checked=draft.defaultVariantId===v.id;
   els.strokeInput.dataset.override=v.options.strokeOverride==null?"false":"true"; els.strokeInput.value=String(v.options.strokeOverride??1.5); renderVariantTabs(); updateEditor();
 }
 function renderVariantTabs(){
@@ -306,7 +306,7 @@ function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els
 function openEditor(id=null){
   if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.deleteSymbol.hidden=false; }
   else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.deleteSymbol.hidden=true; }
-  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#111111"; loadVariantToUI(activeVariantId); els.editor.showModal(); document.body.classList.add("dialog-open");
+  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); document.body.classList.add("dialog-open");
 }
 function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
 function validateDraft(){
