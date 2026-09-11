@@ -175,3 +175,12 @@ body.organize-mode .search-field{opacity:.6}
   .add-button{min-width:108px!important;height:52px!important;padding:0 14px!important}
   .symbol-actions-grid>button{min-height:72px}
 }
+
+
+/* 1.4.2 — botão de opções flutuante */
+#libraryButton.icon-button{
+  position:fixed!important;
+  z-index:42!important;
+  top:max(18px,calc(env(safe-area-inset-top) + 10px))!important;
+  right:max(18px,calc((100vw - 980px)/2 + 18px))!important;
+}
