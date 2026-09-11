@@ -88,6 +88,26 @@ const symbolActionsEdit=document.getElementById("symbolActionsEdit");
 const symbolActionsDelete=document.getElementById("symbolActionsDelete");
 let symbolActionsItemId=null;
 
+const duplicateWarningDialog=document.createElement("dialog");
+duplicateWarningDialog.id="duplicateWarningDialog";
+duplicateWarningDialog.className="duplicate-warning-dialog";
+duplicateWarningDialog.innerHTML=`
+  <div class="duplicate-warning-card">
+    <div class="duplicate-warning-badge">!</div>
+    <h2>Possível duplicata</h2>
+    <div id="duplicateWarningDetails" class="duplicate-warning-details"></div>
+    <p class="duplicate-warning-note">Você ainda pode salvar, mas este aviso sempre aparecerá quando o título ou o código SVG já existir.</p>
+    <div class="duplicate-warning-actions">
+      <button id="duplicateReviewButton" type="button">Voltar e revisar</button>
+      <button id="duplicateSaveAnywayButton" type="button">Salvar duplicata</button>
+    </div>
+  </div>
+`;
+document.body.appendChild(duplicateWarningDialog);
+const duplicateWarningDetails=document.getElementById("duplicateWarningDetails");
+const duplicateReviewButton=document.getElementById("duplicateReviewButton");
+const duplicateSaveAnywayButton=document.getElementById("duplicateSaveAnywayButton");
+
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
 function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#000000",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
@@ -372,7 +392,59 @@ function validateDraft(){
   for(const v of draft.variants){ if(!v.label.trim())return {ok:false,error:"Dê um nome para cada versão"}; const result=transformSvg(v.originalSvg,v.options); if(!result.ok)return {ok:false,error:`${v.label}: ${result.error}`}; v.finalSvg=result.output; }
   return {ok:true};
 }
-function saveDraft(){ const validation=validateDraft(); if(!validation.ok){validation.focus?.focus();showToast(validation.error);return;} draft.updatedAt=new Date().toISOString(); const exists=items.some(x=>x.id===draft.id),nextItems=exists?items.map(x=>x.id===draft.id?draft:x):[draft,...items]; if(!persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;} items=nextItems;render();const msg=exists?"Símbolo atualizado":"Símbolo adicionado";closeEditor();showToast(msg); }
+function duplicateKeySvg(value){
+  const source=String(value||"").trim();
+  if(!source)return "";
+  const parsed=parseSvg(source);
+  if(!parsed.ok)return source.replace(/\s+/g," ");
+  try{return serializeSvg(parsed.root).replace(/>\s+</g,"><").replace(/\s+/g," ").trim();}catch{return source.replace(/\s+/g," ");}
+}
+function findDraftDuplicates(){
+  if(!draft)return {titles:[],svgs:[]};
+  const title=String(draft.name||els.name.value||"").trim().toLocaleLowerCase("pt-BR");
+  const svgKeys=new Set();
+  draft.variants.forEach(v=>{
+    const original=duplicateKeySvg(v.originalSvg);
+    const final=duplicateKeySvg(v.finalSvg);
+    if(original)svgKeys.add(original);
+    if(final)svgKeys.add(final);
+  });
+  const titles=[],svgs=[];
+  items.forEach(item=>{
+    if(item.id===draft.id)return;
+    if(title&&String(item.name||"").trim().toLocaleLowerCase("pt-BR")===title)titles.push(item.name);
+    const matched=item.variants?.some(v=>{
+      const original=duplicateKeySvg(v.originalSvg);
+      const final=duplicateKeySvg(v.finalSvg);
+      return (original&&svgKeys.has(original))||(final&&svgKeys.has(final));
+    });
+    if(matched)svgs.push(item.name);
+  });
+  return {titles:[...new Set(titles)],svgs:[...new Set(svgs)]};
+}
+function commitDraft(){
+  draft.updatedAt=new Date().toISOString();
+  const exists=items.some(x=>x.id===draft.id),nextItems=exists?items.map(x=>x.id===draft.id?draft:x):[draft,...items];
+  if(!persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;}
+  items=nextItems;render();const msg=exists?"Símbolo atualizado":"Símbolo adicionado";closeEditor();showToast(msg);
+}
+function showDuplicateWarning(duplicates){
+  const parts=[];
+  if(duplicates.titles.length)parts.push(`<p><strong>Título já existente</strong><span>${duplicates.titles.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}</span></p>`);
+  if(duplicates.svgs.length)parts.push(`<p><strong>Código SVG já existente</strong><span>${duplicates.svgs.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}</span></p>`);
+  duplicateWarningDetails.innerHTML=parts.join("");
+  duplicateWarningDialog.showModal();
+}
+function escapeDuplicateText(value){
+  return String(value||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function saveDraft(){
+  const validation=validateDraft();
+  if(!validation.ok){validation.focus?.focus();showToast(validation.error);return;}
+  const duplicates=findDraftDuplicates();
+  if(duplicates.titles.length||duplicates.svgs.length){showDuplicateWarning(duplicates);return;}
+  commitDraft();
+}
 function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=newVariant(`Versão ${count}`); draft.variants.push(v); loadVariantToUI(v.id); setTimeout(()=>{els.variantLabel.focus();els.variantLabel.select();},50); }
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
@@ -380,6 +452,9 @@ async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Erro
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
+duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
+duplicateSaveAnywayButton.addEventListener("click",()=>{duplicateWarningDialog.close();commitDraft();});
+duplicateWarningDialog.addEventListener("cancel",event=>{event.preventDefault();duplicateWarningDialog.close();});
 symbolActionsClose.addEventListener("click",closeSymbolActions);
 symbolActionsDialog.addEventListener("cancel",event=>{event.preventDefault();closeSymbolActions();});
 symbolActionsCopy.addEventListener("click",async()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});
