@@ -13,8 +13,8 @@ const els = {
 };
 
 const familyLabel=document.createElement("label"),familyInput=document.createElement("input"),familyList=document.createElement("datalist");
-familyLabel.className="field-label";familyLabel.htmlFor="familyInput";familyLabel.textContent="Família";
-familyInput.id="familyInput";familyInput.className="text-input";familyInput.type="text";familyInput.maxLength=40;familyInput.placeholder="Ex.: Alimentação (vazio = Outros)";familyInput.setAttribute("list","familySuggestions");
+familyLabel.className="field-label";familyLabel.htmlFor="familyInput";familyLabel.textContent="Grupo";
+familyInput.id="familyInput";familyInput.className="text-input";familyInput.type="text";familyInput.maxLength=40;familyInput.placeholder="Grupo";familyInput.setAttribute("list","familySuggestions");
 familyList.id="familySuggestions";
 const familySlot=document.getElementById("familyFieldSlot");
 if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);}
@@ -45,10 +45,10 @@ organizerBar.innerHTML=`
     <button id="organizerDoneButton" class="organizer-done" type="button">Concluir</button>
   </div>
   <div class="organizer-group-tools">
-    <input id="organizerFamilyInput" class="organizer-family-input" type="text" maxlength="40" list="organizerFamilySuggestions" placeholder="Grupo / família">
-    <datalist id="organizerFamilySuggestions"></datalist>
-    <button id="organizerApplyFamilyButton" type="button">Aplicar grupo</button>
-    <button id="organizerRemoveFamilyButton" type="button">Outros</button>
+    <input id="organizerFamilyInput" class="organizer-family-input" type="text" maxlength="40" placeholder="Grupo" autocomplete="off" aria-autocomplete="list" aria-controls="organizerFamilyMatches">
+    <div id="organizerFamilyMatches" class="organizer-family-matches" role="listbox" hidden></div>
+    <button id="organizerApplyFamilyButton" class="organizer-add-family" type="button">Adicionar ao grupo</button>
+    <button id="organizerRemoveFamilyButton" class="organizer-remove-family" type="button" hidden>Tirar do grupo</button>
   </div>
 `;
 document.body.appendChild(organizerBar);
@@ -59,6 +59,33 @@ const organizerFamilyInput=document.getElementById("organizerFamilyInput");
 const organizerFamilyList=document.getElementById("organizerFamilySuggestions");
 const organizerApplyFamily=document.getElementById("organizerApplyFamilyButton");
 const organizerRemoveFamily=document.getElementById("organizerRemoveFamilyButton");
+const organizerFamilyMatches=document.getElementById("organizerFamilyMatches");
+
+const symbolActionsDialog=document.createElement("dialog");
+symbolActionsDialog.id="symbolActionsDialog";
+symbolActionsDialog.className="symbol-actions-dialog";
+symbolActionsDialog.innerHTML=`
+  <div class="symbol-actions-card">
+    <div class="symbol-actions-head">
+      <div><small>Símbolo</small><strong id="symbolActionsTitle">—</strong></div>
+      <button id="symbolActionsClose" type="button" aria-label="Fechar">×</button>
+    </div>
+    <div class="symbol-actions-grid">
+      <button id="symbolActionsCopy" type="button"><span aria-hidden="true">⧉</span><strong>Copiar código</strong></button>
+      <button id="symbolActionsDownload" type="button"><span aria-hidden="true">↓</span><strong>Baixar .SVG</strong></button>
+      <button id="symbolActionsEdit" type="button"><span aria-hidden="true">✎</span><strong>Editar</strong></button>
+      <button id="symbolActionsDelete" class="danger" type="button"><span aria-hidden="true">⌫</span><strong>Excluir</strong></button>
+    </div>
+  </div>
+`;
+document.body.appendChild(symbolActionsDialog);
+const symbolActionsTitle=document.getElementById("symbolActionsTitle");
+const symbolActionsClose=document.getElementById("symbolActionsClose");
+const symbolActionsCopy=document.getElementById("symbolActionsCopy");
+const symbolActionsDownload=document.getElementById("symbolActionsDownload");
+const symbolActionsEdit=document.getElementById("symbolActionsEdit");
+const symbolActionsDelete=document.getElementById("symbolActionsDelete");
+let symbolActionsItemId=null;
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
@@ -168,12 +195,31 @@ function updateEditor(){
 function defaultVariant(item){ return item.variants.find(v=>v.id===item.defaultVariantId)||item.variants[0]; }
 function previewMarkup(svg){ const parsed=parseSvg(svg); if(!parsed.ok)return""; const root=sanitize(parsed.root,true); root.setAttribute("width","62");root.setAttribute("height","62");return serializeSvg(root); }
 function familyKey(item){ return item.family||""; }
+function existingFamilies(){
+  return [...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+}
+function renderOrganizerFamilyMatches(){
+  if(!organizerFamilyMatches)return;
+  const q=organizerFamilyInput.value.trim().toLocaleLowerCase("pt-BR");
+  const matches=existingFamilies().filter(name=>!q||name.toLocaleLowerCase("pt-BR").includes(q)).slice(0,7);
+  organizerFamilyMatches.innerHTML="";
+  matches.forEach(name=>{
+    const button=document.createElement("button");
+    button.type="button";button.className="organizer-family-match";button.textContent=name;button.setAttribute("role","option");
+    button.addEventListener("click",()=>{organizerFamilyInput.value=name;organizerFamilyMatches.hidden=true;updateOrganizerBar();});
+    organizerFamilyMatches.appendChild(button);
+  });
+  organizerFamilyMatches.hidden=!organizeMode||matches.length===0;
+}
 function updateOrganizerBar(){
   if(!organizerBar)return;
   const count=selectedItems.size;
+  const selected=[...selectedItems].map(id=>items.find(item=>item.id===id)).filter(Boolean);
+  const hasGrouped=selected.some(item=>!!item.family);
   organizerCount.textContent=`${count} ${count===1?"selecionado":"selecionados"}`;
-  organizerApplyFamily.disabled=count===0;
-  organizerRemoveFamily.disabled=count===0;
+  organizerApplyFamily.disabled=count===0||!organizerFamilyInput.value.trim();
+  organizerRemoveFamily.hidden=!hasGrouped;
+  organizerRemoveFamily.disabled=!hasGrouped;
 }
 function toggleSelection(id){
   if(selectedItems.has(id))selectedItems.delete(id);else selectedItems.add(id);
@@ -253,6 +299,7 @@ function applyFamilyToSelection(value){
   const total=selectedItems.size;
   selectedItems.clear();
   organizerFamilyInput.value="";
+  organizerFamilyMatches.hidden=true;
   render();
   updateOrganizerBar();
   showToast(family?`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para “${family}”`:`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para Outros`);
@@ -284,10 +331,8 @@ function render(){
         main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
         copy.hidden=true;download.hidden=true;
       }else{
-        main.addEventListener("click",()=>openEditor(item.id));
-        copy.querySelector("span").textContent="Código SVG";
-        copy.addEventListener("click",async e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});
-        download.addEventListener("click",e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"download");downloadSvg(item,def);});
+        main.addEventListener("click",()=>openSymbolActions(item.id));
+        node.querySelector(".card-actions")?.remove();
       }
       inner.appendChild(node);
     });
@@ -302,6 +347,18 @@ function render(){
 function svgFilename(item,variant){ const raw=[item.name,variant.label].filter(Boolean).join("-").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,""); return `${raw||"simbolo"}.svg`; }
 function downloadSvg(item,variant){ const code=variant.finalSvg||variant.originalSvg;if(!code){showToast("Este SVG está vazio");return;} const url=URL.createObjectURL(new Blob([code],{type:"image/svg+xml;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download=svgFilename(item,variant);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast(`Arquivo “${svgFilename(item,variant)}” salvo`); }
 async function copyVariant(item,variant){ try{await copyText(variant.finalSvg||variant.originalSvg);showToast(`“${item.name} · ${variant.label}” copiado`);}catch{showToast("Não foi possível copiar");} }
+function openSymbolActions(id){
+  const item=items.find(x=>x.id===id);if(!item)return;
+  symbolActionsItemId=id;symbolActionsTitle.textContent=item.name;symbolActionsDialog.showModal();
+}
+function closeSymbolActions(){ if(symbolActionsDialog.open)symbolActionsDialog.close();symbolActionsItemId=null; }
+function deleteSymbolById(id){
+  const item=items.find(x=>x.id===id);if(!item)return;
+  if(!confirm(`Excluir “${item.name}” e todas as versões?`))return;
+  const nextItems=items.filter(x=>x.id!==id);
+  if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}
+  items=nextItems;render();closeSymbolActions();showToast("Símbolo excluído");
+}
 function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els.copyList.innerHTML=""; item.variants.forEach(v=>{ const b=document.createElement("button"),details=document.createElement("span"),strong=document.createElement("strong"),small=document.createElement("small"),action=document.createElement("span"); b.type="button";strong.textContent=v.label;small.textContent=`${v.id===item.defaultVariantId?"Padrão · ":""}${v.options?.colorMode==="currentColor"?"currentColor":"SVG"}`;action.textContent=mode==="download"?"Salvar SVG":"Copiar";details.append(strong,small);b.append(details,action);b.addEventListener("click",async()=>{if(mode==="download")downloadSvg(item,v);else await copyVariant(item,v);els.copyDialog.close();});els.copyList.appendChild(b); }); els.copyDialog.showModal(); }
 function openEditor(id=null){
   if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.deleteSymbol.hidden=false; }
@@ -322,6 +379,15 @@ async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Erro
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
+symbolActionsClose.addEventListener("click",closeSymbolActions);
+symbolActionsDialog.addEventListener("cancel",event=>{event.preventDefault();closeSymbolActions();});
+symbolActionsCopy.addEventListener("click",async()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});
+symbolActionsDownload.addEventListener("click",()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"download");downloadSvg(item,def);});
+symbolActionsEdit.addEventListener("click",()=>{const id=symbolActionsItemId;if(!id)return;closeSymbolActions();openEditor(id);});
+symbolActionsDelete.addEventListener("click",()=>{const id=symbolActionsItemId;if(id)deleteSymbolById(id);});
+organizerFamilyInput.addEventListener("input",()=>{renderOrganizerFamilyMatches();updateOrganizerBar();});
+organizerFamilyInput.addEventListener("focus",renderOrganizerFamilyMatches);
+organizerFamilyInput.addEventListener("blur",()=>setTimeout(()=>organizerFamilyMatches.hidden=true,140));
 organizeButton.addEventListener("click",()=>setOrganizeMode(!organizeMode));
 organizerDone.addEventListener("click",()=>setOrganizeMode(false));
 organizerApplyFamily.addEventListener("click",()=>applyFamilyToSelection(organizerFamilyInput.value));
