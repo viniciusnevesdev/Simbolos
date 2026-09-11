@@ -74,3 +74,7 @@ body.organize-mode .search-field{opacity:.6}
 .organize-drag small{color:var(--muted);font-size:10px;font-weight:700}
 .organize-move{font-size:17px;font-weight:800}
 @media(max-width:520px){.organizer-group-tools{grid-template-columns:1fr 1fr}.organizer-family-input{grid-column:1/-1}.organizer-group-tools button{width:100%}body.organize-mode .add-button{bottom:max(190px,calc(env(safe-area-inset-bottom) + 186px))!important}}
+
+/* Pré-visualização padrão: preto puro */
+.card-preview{color:#000000!important;background:#f2f2f7!important}
+.svg-preview{color:#000000!important}
