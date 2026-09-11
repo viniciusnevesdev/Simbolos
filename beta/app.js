@@ -26,6 +26,40 @@ let activeVariantId = null;
 let toastTimer = null;
 const collapsedFamilies=new Set();
 
+let organizeMode=false;
+const selectedItems=new Set();
+
+const organizeButton=document.createElement("button");
+organizeButton.id="organizeButton";
+organizeButton.type="button";
+organizeButton.textContent="Organizar biblioteca";
+els.aboutStorage.insertAdjacentElement("beforebegin",organizeButton);
+
+const organizerBar=document.createElement("div");
+organizerBar.id="organizerBar";
+organizerBar.className="organizer-bar";
+organizerBar.hidden=true;
+organizerBar.innerHTML=`
+  <div class="organizer-head">
+    <div><strong>Organizar biblioteca</strong><small id="organizerCount">0 selecionados</small></div>
+    <button id="organizerDoneButton" class="organizer-done" type="button">Concluir</button>
+  </div>
+  <div class="organizer-group-tools">
+    <input id="organizerFamilyInput" class="organizer-family-input" type="text" maxlength="40" list="organizerFamilySuggestions" placeholder="Grupo / família">
+    <datalist id="organizerFamilySuggestions"></datalist>
+    <button id="organizerApplyFamilyButton" type="button">Aplicar grupo</button>
+    <button id="organizerRemoveFamilyButton" type="button">Outros</button>
+  </div>
+`;
+document.body.appendChild(organizerBar);
+
+const organizerCount=document.getElementById("organizerCount");
+const organizerDone=document.getElementById("organizerDoneButton");
+const organizerFamilyInput=document.getElementById("organizerFamilyInput");
+const organizerFamilyList=document.getElementById("organizerFamilySuggestions");
+const organizerApplyFamily=document.getElementById("organizerApplyFamilyButton");
+const organizerRemoveFamily=document.getElementById("organizerRemoveFamilyButton");
+
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#111111", cleanup:true, strokeOverride:null }; }
 function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#111111",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
@@ -133,20 +167,137 @@ function updateEditor(){
 }
 function defaultVariant(item){ return item.variants.find(v=>v.id===item.defaultVariantId)||item.variants[0]; }
 function previewMarkup(svg){ const parsed=parseSvg(svg); if(!parsed.ok)return""; const root=sanitize(parsed.root,true); root.setAttribute("width","62");root.setAttribute("height","62");return serializeSvg(root); }
+function familyKey(item){ return item.family||""; }
+function updateOrganizerBar(){
+  if(!organizerBar)return;
+  const count=selectedItems.size;
+  organizerCount.textContent=`${count} ${count===1?"selecionado":"selecionados"}`;
+  organizerApplyFamily.disabled=count===0;
+  organizerRemoveFamily.disabled=count===0;
+}
+function toggleSelection(id){
+  if(selectedItems.has(id))selectedItems.delete(id);else selectedItems.add(id);
+  updateOrganizerBar();
+  const card=els.grid.querySelector(`.symbol-card[data-symbol-id="${CSS.escape(id)}"]`);
+  if(card){
+    card.classList.toggle("selected",selectedItems.has(id));
+    const b=card.querySelector(".organize-select");
+    if(b){b.setAttribute("aria-pressed",String(selectedItems.has(id)));b.textContent=selectedItems.has(id)?"✓":"";}
+  }
+}
+function moveItemWithinFamily(id,direction){
+  const item=items.find(x=>x.id===id);if(!item)return;
+  const key=familyKey(item),members=items.filter(x=>familyKey(x)===key),index=members.findIndex(x=>x.id===id),target=index+direction;
+  if(target<0||target>=members.length)return;
+  const a=items.findIndex(x=>x.id===members[index].id),b=items.findIndex(x=>x.id===members[target].id);
+  [items[a],items[b]]=[items[b],items[a]];
+  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");return;}
+  render();
+}
+function persistFamilyOrder(key,orderedIds){
+  const memberIndexes=items.map((item,index)=>familyKey(item)===key?index:-1).filter(index=>index>=0);
+  if(memberIndexes.length!==orderedIds.length)return;
+  const byId=new Map(items.map(item=>[item.id,item]));
+  const ordered=orderedIds.map(id=>byId.get(id)).filter(Boolean);
+  if(ordered.length!==memberIndexes.length)return;
+  memberIndexes.forEach((index,i)=>{items[index]=ordered[i];});
+  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");render();}
+}
+function enableCardDrag(handle,card,key){
+  handle.addEventListener("pointerdown",event=>{
+    if(!organizeMode)return;
+    event.preventDefault();
+    const grid=card.parentElement;
+    const pointerId=event.pointerId;
+    card.classList.add("is-dragging");
+    try{handle.setPointerCapture(pointerId);}catch{}
+    const move=e=>{
+      if(e.clientY<90)window.scrollBy(0,-16);
+      else if(e.clientY>window.innerHeight-120)window.scrollBy(0,16);
+      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".symbol-card");
+      if(!target||target===card||target.parentElement!==grid)return;
+      const rect=target.getBoundingClientRect(),cardRect=card.getBoundingClientRect();
+      const sameRow=Math.abs(cardRect.top-rect.top)<rect.height*.45;
+      const before=sameRow?e.clientX<rect.left+rect.width/2:e.clientY<rect.top+rect.height/2;
+      grid.insertBefore(card,before?target:target.nextSibling);
+    };
+    const finish=()=>{
+      handle.removeEventListener("pointermove",move);
+      handle.removeEventListener("pointerup",finish);
+      handle.removeEventListener("pointercancel",finish);
+      card.classList.remove("is-dragging");
+      const ids=[...grid.querySelectorAll(".symbol-card[data-symbol-id]")].map(node=>node.dataset.symbolId);
+      persistFamilyOrder(key,ids);
+    };
+    handle.addEventListener("pointermove",move);
+    handle.addEventListener("pointerup",finish,{once:true});
+    handle.addEventListener("pointercancel",finish,{once:true});
+  });
+}
+function setOrganizeMode(enabled){
+  organizeMode=!!enabled;
+  selectedItems.clear();
+  organizerBar.hidden=!organizeMode;
+  organizeButton.textContent=organizeMode?"Sair da organização":"Organizar biblioteca";
+  document.body.classList.toggle("organize-mode",organizeMode);
+  els.search.disabled=organizeMode;
+  if(organizeMode){els.search.value="";els.libraryMenu.hidden=true;}
+  updateOrganizerBar();
+  render();
+}
+function applyFamilyToSelection(value){
+  if(!selectedItems.size){showToast("Selecione pelo menos um ícone");return;}
+  const family=String(value||"").trim().slice(0,40);
+  items=items.map(item=>selectedItems.has(item.id)?{...item,family,updatedAt:new Date().toISOString()}:item);
+  if(!persist(items)){showToast("Não foi possível atualizar o grupo");return;}
+  const total=selectedItems.size;
+  selectedItems.clear();
+  organizerFamilyInput.value="";
+  render();
+  updateOrganizerBar();
+  showToast(family?`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para “${family}”`:`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para Outros`);
+}
 function render(){
   const q=els.search.value.trim().toLocaleLowerCase("pt-BR"),filtered=items.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q)||item.variants.some(v=>v.label.toLocaleLowerCase("pt-BR").includes(q))); els.grid.innerHTML="";
   const named=[...new Set(filtered.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")),families=[...named,"Outros"];
   families.forEach(family=>{
     const members=filtered.filter(item=>family==="Outros"?!item.family:item.family===family);if(!members.length)return;
-    const section=document.createElement("section"),heading=document.createElement("button"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"__others__":family;
-    section.className="family-section";heading.className="family-heading";heading.type="button";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";heading.append(title,arrow);inner.className="family-grid";
+    const section=document.createElement("section"),heading=document.createElement("button"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"":family,collapseKey=family==="Outros"?"__others__":family;
+    section.className="family-section";heading.className="family-heading";heading.type="button";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";heading.append(title,arrow);inner.className="family-grid";inner.dataset.family=key;
     const setExpanded=expanded=>{heading.setAttribute("aria-expanded",String(expanded));heading.setAttribute("aria-label",`${expanded?"Recolher":"Expandir"} família ${family}`);inner.hidden=!expanded;section.classList.toggle("collapsed",!expanded);};
-    setExpanded(!collapsedFamilies.has(key));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(key);else collapsedFamilies.delete(key);setExpanded(!expanded);});
-    members.forEach(item=>{const node=els.template.content.cloneNode(true),main=node.querySelector(".symbol-main"),copy=node.querySelector(".copy-button"),download=node.querySelector(".download-button"),def=defaultVariant(item);node.querySelector(".card-preview").innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||"");node.querySelector("h2").textContent=item.name;main.addEventListener("click",()=>openEditor(item.id));copy.querySelector("span").textContent="Código SVG";copy.addEventListener("click",async e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});download.addEventListener("click",e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"download");downloadSvg(item,def);});inner.appendChild(node);});
+    setExpanded(!collapsedFamilies.has(collapseKey));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(collapseKey);else collapsedFamilies.delete(collapseKey);setExpanded(!expanded);});
+    members.forEach(item=>{
+      const node=els.template.content.cloneNode(true),card=node.querySelector(".symbol-card"),main=node.querySelector(".symbol-main"),copy=node.querySelector(".copy-button"),download=node.querySelector(".download-button"),def=defaultVariant(item);
+      card.dataset.symbolId=item.id;
+      node.querySelector(".card-preview").innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||"");
+      node.querySelector("h2").textContent=item.name;
+      if(organizeMode){
+        card.classList.add("organize-card");
+        card.classList.toggle("selected",selectedItems.has(item.id));
+        const select=document.createElement("button");select.type="button";select.className="organize-select";select.setAttribute("aria-label",`Selecionar ${item.name}`);select.setAttribute("aria-pressed",String(selectedItems.has(item.id)));select.textContent=selectedItems.has(item.id)?"✓":"";
+        select.addEventListener("click",e=>{e.stopPropagation();toggleSelection(item.id);});
+        const tools=document.createElement("div");tools.className="organize-card-tools";
+        const previous=document.createElement("button");previous.type="button";previous.className="organize-move";previous.textContent="←";previous.setAttribute("aria-label","Mover uma posição para trás");previous.disabled=members[0].id===item.id;previous.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,-1);});
+        const drag=document.createElement("button");drag.type="button";drag.className="organize-drag";drag.innerHTML="<span aria-hidden=\"true\">⠿</span><small>arrastar</small>";drag.setAttribute("aria-label","Arrastar para reorganizar");
+        const next=document.createElement("button");next.type="button";next.className="organize-move";next.textContent="→";next.setAttribute("aria-label","Mover uma posição para frente");next.disabled=members[members.length-1].id===item.id;next.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,1);});
+        tools.append(previous,drag,next);card.append(select,tools);enableCardDrag(drag,card,key);
+        main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
+        copy.hidden=true;download.hidden=true;
+      }else{
+        main.addEventListener("click",()=>openEditor(item.id));
+        copy.querySelector("span").textContent="Código SVG";
+        copy.addEventListener("click",async e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});
+        download.addEventListener("click",e=>{e.stopPropagation();if(item.variants.length>1)return openVariantChooser(item,"download");downloadSvg(item,def);});
+      }
+      inner.appendChild(node);
+    });
     section.append(heading,inner);els.grid.appendChild(section);
   });
-  els.familyList.innerHTML="";[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(family=>{const option=document.createElement("option");option.value=family;els.familyList.appendChild(option);});
+  const familiesForInputs=[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  els.familyList.innerHTML="";organizerFamilyList.innerHTML="";
+  familiesForInputs.forEach(family=>{const option=document.createElement("option");option.value=family;els.familyList.appendChild(option);const option2=document.createElement("option");option2.value=family;organizerFamilyList.appendChild(option2);});
   els.count.textContent=`${items.length} ${items.length===1?"símbolo":"símbolos"}`; els.empty.hidden=items.length!==0; els.noResults.hidden=!(items.length>0&&filtered.length===0); els.grid.hidden=filtered.length===0; els.clearSearch.style.display=q?"grid":"none";
+  updateOrganizerBar();
 }
 function svgFilename(item,variant){ const raw=[item.name,variant.label].filter(Boolean).join("-").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,""); return `${raw||"simbolo"}.svg`; }
 function downloadSvg(item,variant){ const code=variant.finalSvg||variant.originalSvg;if(!code){showToast("Este SVG está vazio");return;} const url=URL.createObjectURL(new Blob([code],{type:"image/svg+xml;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download=svgFilename(item,variant);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast(`Arquivo “${svgFilename(item,variant)}” salvo`); }
@@ -171,6 +322,10 @@ async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Erro
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
+organizeButton.addEventListener("click",()=>setOrganizeMode(!organizeMode));
+organizerDone.addEventListener("click",()=>setOrganizeMode(false));
+organizerApplyFamily.addEventListener("click",()=>applyFamilyToSelection(organizerFamilyInput.value));
+organizerRemoveFamily.addEventListener("click",()=>applyFamilyToSelection(""));
 els.add.addEventListener("click",()=>openEditor()); els.emptyAdd.addEventListener("click",()=>openEditor()); els.cancel.addEventListener("click",closeEditor); els.save.addEventListener("click",saveDraft);
 els.name.addEventListener("input",()=>{if(draft)els.editorTitle.textContent=els.name.value.trim()||"Novo símbolo";}); els.variantLabel.addEventListener("input",()=>{const v=currentVariant();if(v){v.label=els.variantLabel.value;renderVariantTabs();els.previewVariantName.textContent=els.variantLabel.value||"Sem nome";}});
 els.defaultVariant.addEventListener("change",()=>{if(!draft)return;if(els.defaultVariant.checked){draft.defaultVariantId=activeVariantId;renderVariantTabs();}else{els.defaultVariant.checked=true;showToast("Sempre precisa existir uma versão padrão");}});
