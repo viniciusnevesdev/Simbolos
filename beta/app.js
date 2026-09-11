@@ -13,9 +13,12 @@ const els = {
 };
 
 const familyLabel=document.createElement("label"),familyInput=document.createElement("input"),familyList=document.createElement("datalist");
-familyLabel.className="field-label field-spaced";familyLabel.htmlFor="familyInput";familyLabel.textContent="Família";
+familyLabel.className="field-label";familyLabel.htmlFor="familyInput";familyLabel.textContent="Família";
 familyInput.id="familyInput";familyInput.className="text-input";familyInput.type="text";familyInput.maxLength=40;familyInput.placeholder="Ex.: Alimentação (vazio = Outros)";familyInput.setAttribute("list","familySuggestions");
-familyList.id="familySuggestions";els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);els.family=familyInput;els.familyList=familyList;
+familyList.id="familySuggestions";
+const familySlot=document.getElementById("familyFieldSlot");
+if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);}
+els.family=familyInput;els.familyList=familyList;
 
 let items = loadItems();
 let draft = null;
