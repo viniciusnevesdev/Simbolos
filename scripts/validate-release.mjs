@@ -36,7 +36,7 @@ const menuIndex=read('menu/index.html');
 if(!menuIndex.includes('../menu.html')) fail('/menu/index.html deve apontar para ../menu.html');
 
 const index=read('index.html');
-if(!index.includes('./icons/apple-touch-icon.png')) fail('Oficial sem apple-touch-icon PNG');
+if(!/\.\/icons\/apple-touch-icon[^"']*\.png/.test(index)) fail('Oficial sem apple-touch-icon PNG');
 if(!index.includes('./boot.js')) fail('Oficial sem boot resiliente');
 if(importsApp(index)) fail('app.js não deve ser carregado diretamente pelo HTML');
 

@@ -32,7 +32,10 @@ const selectedItems=new Set();
 const organizeButton=document.createElement("button");
 organizeButton.id="organizeButton";
 organizeButton.type="button";
-organizeButton.textContent="Organizar biblioteca";
+organizeButton.className="menu-icon-row";
+const ORGANIZE_MENU_ICON="<svg class=\"menu-item-icon organize-menu-icon\" aria-hidden=\"true\" viewBox=\"0 0 29.1875 24.7578\"><g><rect height=\"24.7578\" opacity=\"0\" width=\"29.1875\"/><path d=\"M23.5703 6.21094L23.5703 12.2039C23.3448 12.1768 23.1152 12.1641 22.8828 12.1641C22.6478 12.1641 22.4155 12.1773 22.1875 12.2056L22.1875 6.28125C22.1875 5.16406 21.5703 4.57812 20.5 4.57812L8.27344 4.57812C7.17969 4.57812 6.58594 5.16406 6.58594 6.28125L6.58594 18.4766C6.58594 19.6016 7.17969 20.1797 8.27344 20.1797L16.8321 20.1797C16.9663 20.6694 17.1636 21.1331 17.4144 21.5625L8.24219 21.5625C6.22656 21.5625 5.20312 20.5547 5.20312 18.5547L5.20312 6.21094C5.20312 4.21094 6.22656 3.19531 8.24219 3.19531L20.5234 3.19531C22.5469 3.19531 23.5703 4.21875 23.5703 6.21094Z\"/><path d=\"M11.3281 16.1875L11.3281 17.9453C11.3281 18.3906 11.0312 18.6875 10.5781 18.6875L8.83594 18.6875C8.38281 18.6875 8.08594 18.3906 8.08594 17.9453L8.08594 16.1875C8.08594 15.7422 8.38281 15.4453 8.83594 15.4453L10.5781 15.4453C11.0312 15.4453 11.3281 15.7422 11.3281 16.1875ZM16.0156 16.1875L16.0156 17.9453C16.0156 18.3906 15.7266 18.6875 15.2656 18.6875L13.5312 18.6875C13.0703 18.6875 12.7812 18.3906 12.7812 17.9453L12.7812 16.1875C12.7812 15.7422 13.0703 15.4453 13.5312 15.4453L15.2656 15.4453C15.7266 15.4453 16.0156 15.7422 16.0156 16.1875ZM20.6953 11.5156L20.6953 12.5701C19.8466 12.8821 19.0844 13.379 18.4531 14.0078L18.2109 14.0078C17.75 14.0078 17.4531 13.7109 17.4531 13.2656L17.4531 11.5156C17.4531 11.0625 17.75 10.7734 18.2109 10.7734L19.9453 10.7734C20.3984 10.7734 20.6953 11.0625 20.6953 11.5156ZM11.3281 11.5156L11.3281 13.2656C11.3281 13.7109 11.0312 14.0078 10.5781 14.0078L8.83594 14.0078C8.38281 14.0078 8.08594 13.7109 8.08594 13.2656L8.08594 11.5156C8.08594 11.0625 8.38281 10.7734 8.83594 10.7734L10.5781 10.7734C11.0312 10.7734 11.3281 11.0625 11.3281 11.5156ZM16.0156 11.5156L16.0156 13.2656C16.0156 13.7109 15.7266 14.0078 15.2656 14.0078L13.5312 14.0078C13.0703 14.0078 12.7812 13.7109 12.7812 13.2656L12.7812 11.5156C12.7812 11.0625 13.0703 10.7734 13.5312 10.7734L15.2656 10.7734C15.7266 10.7734 16.0156 11.0625 16.0156 11.5156ZM11.3281 6.82812L11.3281 8.58594C11.3281 9.03125 11.0312 9.32812 10.5781 9.32812L8.83594 9.32812C8.38281 9.32812 8.08594 9.03125 8.08594 8.58594L8.08594 6.82812C8.08594 6.38281 8.38281 6.08594 8.83594 6.08594L10.5781 6.08594C11.0312 6.08594 11.3281 6.38281 11.3281 6.82812ZM16.0156 6.82812L16.0156 8.58594C16.0156 9.03125 15.7266 9.32812 15.2656 9.32812L13.5312 9.32812C13.0703 9.32812 12.7812 9.03125 12.7812 8.58594L12.7812 6.82812C12.7812 6.38281 13.0703 6.08594 13.5312 6.08594L15.2656 6.08594C15.7266 6.08594 16.0156 6.38281 16.0156 6.82812ZM20.6953 6.82812L20.6953 8.58594C20.6953 9.03125 20.3984 9.32812 19.9453 9.32812L18.2109 9.32812C17.75 9.32812 17.4531 9.03125 17.4531 8.58594L17.4531 6.82812C17.4531 6.38281 17.75 6.08594 18.2109 6.08594L19.9453 6.08594C20.3984 6.08594 20.6953 6.38281 20.6953 6.82812Z\"/><path d=\"M27.9375 18.4609C27.9375 21.2266 25.6328 23.5156 22.8828 23.5156C20.1172 23.5156 17.8359 21.2422 17.8359 18.4609C17.8359 15.6953 20.1172 13.4062 22.8828 13.4062C25.6562 13.4062 27.9375 15.6875 27.9375 18.4609ZM19.3906 18.4531C19.3906 18.8672 19.7344 19.2109 20.1406 19.2109C20.5547 19.2109 20.8906 18.8672 20.8984 18.4531C20.8984 18.0547 20.5547 17.7031 20.1406 17.7031C19.7344 17.7031 19.3906 18.0469 19.3906 18.4531ZM22.1484 18.4531C22.1484 18.8672 22.4922 19.2109 22.8984 19.2109C23.3047 19.2109 23.6484 18.8672 23.6562 18.4531C23.6562 18.0547 23.3047 17.7031 22.8984 17.7031C22.4922 17.7031 22.1484 18.0469 22.1484 18.4531ZM24.875 18.4531C24.875 18.8672 25.2188 19.2109 25.6328 19.2109C26.0391 19.2109 26.375 18.8672 26.3828 18.4531C26.3828 18.0547 26.0391 17.7031 25.6328 17.7031C25.2188 17.7031 24.875 18.0469 24.875 18.4531Z\"/></g></svg>";
+function setOrganizeMenuLabel(label){organizeButton.innerHTML=ORGANIZE_MENU_ICON+`<span>${label}</span>`;}
+setOrganizeMenuLabel("Organizar biblioteca");
 els.aboutStorage.insertAdjacentElement("beforebegin",organizeButton);
 
 const organizerBar=document.createElement("div");
@@ -87,6 +90,26 @@ const symbolActionsDownload=document.getElementById("symbolActionsDownload");
 const symbolActionsEdit=document.getElementById("symbolActionsEdit");
 const symbolActionsDelete=document.getElementById("symbolActionsDelete");
 let symbolActionsItemId=null;
+
+const duplicateWarningDialog=document.createElement("dialog");
+duplicateWarningDialog.id="duplicateWarningDialog";
+duplicateWarningDialog.className="duplicate-warning-dialog";
+duplicateWarningDialog.innerHTML=`
+  <div class="duplicate-warning-card">
+    <div class="duplicate-warning-badge">!</div>
+    <h2>Possível duplicata</h2>
+    <div id="duplicateWarningDetails" class="duplicate-warning-details"></div>
+    <p class="duplicate-warning-note">Você ainda pode salvar, mas este aviso sempre aparecerá quando o título ou o código SVG já existir.</p>
+    <div class="duplicate-warning-actions">
+      <button id="duplicateReviewButton" type="button">Voltar e revisar</button>
+      <button id="duplicateSaveAnywayButton" type="button">Salvar duplicata</button>
+    </div>
+  </div>
+`;
+document.body.appendChild(duplicateWarningDialog);
+const duplicateWarningDetails=document.getElementById("duplicateWarningDetails");
+const duplicateReviewButton=document.getElementById("duplicateReviewButton");
+const duplicateSaveAnywayButton=document.getElementById("duplicateSaveAnywayButton");
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
@@ -285,7 +308,7 @@ function setOrganizeMode(enabled){
   organizeMode=!!enabled;
   selectedItems.clear();
   organizerBar.hidden=!organizeMode;
-  organizeButton.textContent=organizeMode?"Sair da organização":"Organizar biblioteca";
+  setOrganizeMenuLabel(organizeMode?"Sair da organização":"Organizar biblioteca");
   document.body.classList.toggle("organize-mode",organizeMode);
   els.search.disabled=organizeMode;
   if(organizeMode){els.search.value="";els.libraryMenu.hidden=true;}
@@ -372,7 +395,59 @@ function validateDraft(){
   for(const v of draft.variants){ if(!v.label.trim())return {ok:false,error:"Dê um nome para cada versão"}; const result=transformSvg(v.originalSvg,v.options); if(!result.ok)return {ok:false,error:`${v.label}: ${result.error}`}; v.finalSvg=result.output; }
   return {ok:true};
 }
-function saveDraft(){ const validation=validateDraft(); if(!validation.ok){validation.focus?.focus();showToast(validation.error);return;} draft.updatedAt=new Date().toISOString(); const exists=items.some(x=>x.id===draft.id),nextItems=exists?items.map(x=>x.id===draft.id?draft:x):[draft,...items]; if(!persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;} items=nextItems;render();const msg=exists?"Símbolo atualizado":"Símbolo adicionado";closeEditor();showToast(msg); }
+function duplicateKeySvg(value){
+  const source=String(value||"").trim();
+  if(!source)return "";
+  const parsed=parseSvg(source);
+  if(!parsed.ok)return source.replace(/\s+/g," ");
+  try{return serializeSvg(parsed.root).replace(/>\s+</g,"><").replace(/\s+/g," ").trim();}catch{return source.replace(/\s+/g," ");}
+}
+function findDraftDuplicates(){
+  if(!draft)return {titles:[],svgs:[]};
+  const title=String(draft.name||els.name.value||"").trim().toLocaleLowerCase("pt-BR");
+  const svgKeys=new Set();
+  draft.variants.forEach(v=>{
+    const original=duplicateKeySvg(v.originalSvg);
+    const final=duplicateKeySvg(v.finalSvg);
+    if(original)svgKeys.add(original);
+    if(final)svgKeys.add(final);
+  });
+  const titles=[],svgs=[];
+  items.forEach(item=>{
+    if(item.id===draft.id)return;
+    if(title&&String(item.name||"").trim().toLocaleLowerCase("pt-BR")===title)titles.push(item.name);
+    const matched=item.variants?.some(v=>{
+      const original=duplicateKeySvg(v.originalSvg);
+      const final=duplicateKeySvg(v.finalSvg);
+      return (original&&svgKeys.has(original))||(final&&svgKeys.has(final));
+    });
+    if(matched)svgs.push(item.name);
+  });
+  return {titles:[...new Set(titles)],svgs:[...new Set(svgs)]};
+}
+function commitDraft(){
+  draft.updatedAt=new Date().toISOString();
+  const exists=items.some(x=>x.id===draft.id),nextItems=exists?items.map(x=>x.id===draft.id?draft:x):[draft,...items];
+  if(!persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;}
+  items=nextItems;render();const msg=exists?"Símbolo atualizado":"Símbolo adicionado";closeEditor();showToast(msg);
+}
+function showDuplicateWarning(duplicates){
+  const parts=[];
+  if(duplicates.titles.length)parts.push(`<p><strong>Título já existente</strong><span>${duplicates.titles.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}</span></p>`);
+  if(duplicates.svgs.length)parts.push(`<p><strong>Código SVG já existente</strong><span>${duplicates.svgs.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}</span></p>`);
+  duplicateWarningDetails.innerHTML=parts.join("");
+  duplicateWarningDialog.showModal();
+}
+function escapeDuplicateText(value){
+  return String(value||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function saveDraft(){
+  const validation=validateDraft();
+  if(!validation.ok){validation.focus?.focus();showToast(validation.error);return;}
+  const duplicates=findDraftDuplicates();
+  if(duplicates.titles.length||duplicates.svgs.length){showDuplicateWarning(duplicates);return;}
+  commitDraft();
+}
 function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=newVariant(`Versão ${count}`); draft.variants.push(v); loadVariantToUI(v.id); setTimeout(()=>{els.variantLabel.focus();els.variantLabel.select();},50); }
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
@@ -380,6 +455,9 @@ async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Erro
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
+duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
+duplicateSaveAnywayButton.addEventListener("click",()=>{duplicateWarningDialog.close();commitDraft();});
+duplicateWarningDialog.addEventListener("cancel",event=>{event.preventDefault();duplicateWarningDialog.close();});
 symbolActionsClose.addEventListener("click",closeSymbolActions);
 symbolActionsDialog.addEventListener("cancel",event=>{event.preventDefault();closeSymbolActions();});
 symbolActionsCopy.addEventListener("click",async()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});

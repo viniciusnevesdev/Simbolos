@@ -184,3 +184,166 @@ body.organize-mode .search-field{opacity:.6}
   top:max(18px,calc(env(safe-area-inset-top) + 10px))!important;
   right:max(18px,calc((100vw - 980px)/2 + 18px))!important;
 }
+
+
+/* 1.4.3 Beta — recolher/expandir grupos */
+#symbolGrid .family-grid[hidden]{
+  display:none!important;
+}
+
+
+/* 1.4.4 Beta — tipografia compacta conforme densidade */
+#symbolGrid .card-info h2{
+  line-height:1.05!important;
+  letter-spacing:-.025em!important;
+  font-weight:650!important;
+}
+#symbolGrid[data-columns="3"] .card-info{padding:7px 6px 6px!important}
+#symbolGrid[data-columns="3"] .card-info h2{font-size:10.5px!important}
+
+#symbolGrid[data-columns="4"] .card-info{padding:6px 4px 5px!important}
+#symbolGrid[data-columns="4"] .card-info h2{font-size:8.8px!important}
+
+#symbolGrid[data-columns="5"] .card-info{padding:5px 3px 4px!important}
+#symbolGrid[data-columns="5"] .card-info h2{font-size:7.4px!important}
+
+#symbolGrid[data-columns="6"] .card-info{padding:4px 2px 3px!important}
+#symbolGrid[data-columns="6"] .card-info h2{font-size:6.6px!important}
+
+#symbolGrid[data-columns="5"] .card-info h2,
+#symbolGrid[data-columns="6"] .card-info h2{
+  text-overflow:clip!important;
+}
+
+
+/* 1.4.5 Beta — confirmação de duplicatas */
+.duplicate-warning-dialog{
+  width:min(calc(100% - 28px),430px);
+  max-width:none;
+  margin:auto;
+  padding:0;
+  border:0;
+  border-radius:24px;
+  background:transparent;
+}
+.duplicate-warning-dialog::backdrop{
+  background:rgba(0,0,0,.42);
+  backdrop-filter:blur(4px);
+}
+.duplicate-warning-card{
+  padding:19px;
+  border:1px solid var(--line);
+  border-radius:24px;
+  background:var(--card);
+  box-shadow:0 18px 46px rgba(0,0,0,.3);
+}
+.duplicate-warning-badge{
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  margin-bottom:12px;
+  border-radius:12px;
+  background:rgba(255,149,0,.16);
+  color:#ff9500;
+  font-size:20px;
+  font-weight:850;
+}
+.duplicate-warning-card h2{
+  margin:0 0 12px;
+  font-size:21px;
+}
+.duplicate-warning-details{
+  display:grid;
+  gap:8px;
+}
+.duplicate-warning-details p{
+  margin:0;
+  padding:11px 12px;
+  border-radius:13px;
+  background:var(--soft);
+}
+.duplicate-warning-details strong,
+.duplicate-warning-details span{
+  display:block;
+}
+.duplicate-warning-details strong{
+  margin-bottom:4px;
+  font-size:13px;
+}
+.duplicate-warning-details span{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+.duplicate-warning-note{
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+}
+.duplicate-warning-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:16px;
+}
+.duplicate-warning-actions button{
+  min-height:46px;
+  border:0;
+  border-radius:13px;
+  font-weight:750;
+}
+#duplicateReviewButton{
+  background:var(--soft);
+  color:var(--text);
+}
+#duplicateSaveAnywayButton{
+  background:rgba(255,149,0,.16);
+  color:#c66d00;
+}
+@media(prefers-color-scheme:dark){
+  #duplicateSaveAnywayButton{color:#ff9f0a}
+}
+
+
+/* 1.4.6 Beta — ícones no menu da biblioteca */
+#libraryMenu .menu-icon-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:13px!important;
+}
+#libraryMenu .menu-icon-row .menu-item-icon{
+  width:24px!important;
+  height:24px!important;
+  flex:0 0 24px!important;
+  overflow:visible;
+}
+#libraryMenu .menu-icon-row .menu-item-icon path{
+  fill:currentColor!important;
+  fill-opacity:.85!important;
+}
+#libraryMenu .menu-icon-row span{
+  min-width:0;
+  flex:1 1 auto;
+}
+#libraryMenu #organizeButton .organize-menu-icon{
+  width:25px!important;
+  height:25px!important;
+}
+
+
+/* 1.4.7 Beta — menu de opções mais compacto */
+#libraryMenu.popover > a,
+#libraryMenu.popover > button{
+  min-height:46px!important;
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+}
+#libraryMenu .menu-icon-row{
+  gap:11px!important;
+}
+#libraryMenu .grid-layout-setting{
+  margin-top:0!important;
+  margin-bottom:2px!important;
+  padding-top:7px!important;
+  padding-bottom:9px!important;
+}
