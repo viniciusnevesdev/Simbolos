@@ -371,9 +371,9 @@ body.organize-mode .search-field{opacity:.6}
 @keyframes organize-demo-hand{0%,16%{transform:scale(.8);opacity:0}30%,65%{transform:scale(1.12);opacity:1}80%,100%{transform:scale(.85);opacity:0}}
 @media(prefers-reduced-motion:reduce){.organize-demo-tile,.organize-demo-gap,.organize-demo-hand{animation:none}.organize-demo-gap{opacity:.6}.organize-demo-hand{opacity:1;transform:translate(82px,-8px)}}
 
-/* 1.4.10 Beta — grupos recolhidos com espaçamento fixo */
+/* 1.4.11 Beta — títulos de grupos recolhidos próximos */
 #symbolGrid .family-section.collapsed{
-  margin:0 0 30px!important;
+  margin:0 0 10px!important;
 }
 #symbolGrid .family-section.collapsed .family-grid{
   display:none!important;
