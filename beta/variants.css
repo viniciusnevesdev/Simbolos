@@ -371,3 +371,52 @@ body.organize-mode .search-field{opacity:.6}
 @keyframes organize-demo-gap{0%,31%{opacity:0}42%,73%{opacity:1}84%,100%{opacity:0}}
 @keyframes organize-demo-hand{0%,15%{transform:translate(0,0);opacity:0}25%,62%{transform:translate(82px,-20px);opacity:1}78%,100%{transform:translate(82px,-8px);opacity:0}}
 @media(prefers-reduced-motion:reduce){.organize-demo-tile,.organize-demo-gap,.organize-demo-hand{animation:none}.organize-demo-gap{opacity:.6}.organize-demo-hand{opacity:1;transform:translate(82px,-8px)}}
+
+
+/* 1.4.9 Beta — grupos recolhidos compactos e ícone representativo */
+#symbolGrid .family-section.collapsed{
+  margin-bottom:4px!important;
+}
+#symbolGrid .family-section.collapsed .family-heading{
+  min-height:42px!important;
+  padding-top:3px!important;
+  padding-bottom:3px!important;
+}
+#symbolGrid .family-heading-label{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+#symbolGrid .family-heading-title{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#symbolGrid .family-heading-icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  display:grid;
+  place-items:center;
+  color:#000;
+}
+#symbolGrid .family-heading-icon svg{
+  width:22px!important;
+  height:22px!important;
+  max-width:22px!important;
+  max-height:22px!important;
+  display:block;
+}
+.organizer-group-icon{
+  grid-column:1/-1;
+  min-height:40px!important;
+  background:rgba(10,132,255,.12)!important;
+  color:#0a84ff!important;
+}
+.organizer-group-icon[data-active="true"]{
+  background:rgba(255,59,48,.12)!important;
+  color:var(--danger)!important;
+}
+.organizer-group-icon[hidden]{display:none!important}
