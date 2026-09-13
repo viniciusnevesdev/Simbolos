@@ -28,6 +28,7 @@ const collapsedFamilies=new Set();
 
 let organizeMode=false;
 const selectedItems=new Set();
+let swapSourceId=null;
 
 const organizeButton=document.createElement("button");
 organizeButton.id="organizeButton";
@@ -249,64 +250,24 @@ function toggleSelection(id){
   if(selectedItems.has(id))selectedItems.delete(id);else selectedItems.add(id);
   updateOrganizerBar();
   const card=els.grid.querySelector(`.symbol-card[data-symbol-id="${CSS.escape(id)}"]`);
-  if(card){
-    card.classList.toggle("selected",selectedItems.has(id));
-    const b=card.querySelector(".organize-select");
-    if(b){b.setAttribute("aria-pressed",String(selectedItems.has(id)));b.textContent=selectedItems.has(id)?"✓":"";}
-  }
+  if(card)card.classList.toggle("selected",selectedItems.has(id));
 }
-function moveItemWithinFamily(id,direction){
-  const item=items.find(x=>x.id===id);if(!item)return;
-  const key=familyKey(item),members=items.filter(x=>familyKey(x)===key),index=members.findIndex(x=>x.id===id),target=index+direction;
-  if(target<0||target>=members.length)return;
-  const a=items.findIndex(x=>x.id===members[index].id),b=items.findIndex(x=>x.id===members[target].id);
-  [items[a],items[b]]=[items[b],items[a]];
-  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");return;}
-  render();
-}
-function persistFamilyOrder(key,orderedIds){
-  const memberIndexes=items.map((item,index)=>familyKey(item)===key?index:-1).filter(index=>index>=0);
-  if(memberIndexes.length!==orderedIds.length)return;
-  const byId=new Map(items.map(item=>[item.id,item]));
-  const ordered=orderedIds.map(id=>byId.get(id)).filter(Boolean);
-  if(ordered.length!==memberIndexes.length)return;
-  memberIndexes.forEach((index,i)=>{items[index]=ordered[i];});
-  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");render();}
-}
-function enableCardDrag(handle,card,key){
-  handle.addEventListener("pointerdown",event=>{
-    if(!organizeMode)return;
-    event.preventDefault();
-    const grid=card.parentElement;
-    const pointerId=event.pointerId;
-    card.classList.add("is-dragging");
-    try{handle.setPointerCapture(pointerId);}catch{}
-    const move=e=>{
-      if(e.clientY<90)window.scrollBy(0,-16);
-      else if(e.clientY>window.innerHeight-120)window.scrollBy(0,16);
-      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".symbol-card");
-      if(!target||target===card||target.parentElement!==grid)return;
-      const rect=target.getBoundingClientRect(),cardRect=card.getBoundingClientRect();
-      const sameRow=Math.abs(cardRect.top-rect.top)<rect.height*.45;
-      const before=sameRow?e.clientX<rect.left+rect.width/2:e.clientY<rect.top+rect.height/2;
-      grid.insertBefore(card,before?target:target.nextSibling);
-    };
-    const finish=()=>{
-      handle.removeEventListener("pointermove",move);
-      handle.removeEventListener("pointerup",finish);
-      handle.removeEventListener("pointercancel",finish);
-      card.classList.remove("is-dragging");
-      const ids=[...grid.querySelectorAll(".symbol-card[data-symbol-id]")].map(node=>node.dataset.symbolId);
-      persistFamilyOrder(key,ids);
-    };
-    handle.addEventListener("pointermove",move);
-    handle.addEventListener("pointerup",finish,{once:true});
-    handle.addEventListener("pointercancel",finish,{once:true});
-  });
+function swapItems(id){
+  if(!swapSourceId){swapSourceId=id;render();showToast("Agora toque em Trocar lugar no outro ícone");return;}
+  if(swapSourceId===id){swapSourceId=null;render();return;}
+  const source=items.find(item=>item.id===swapSourceId),target=items.find(item=>item.id===id);
+  if(!source||!target){swapSourceId=null;render();return;}
+  if(familyKey(source)!==familyKey(target)){showToast("Escolha outro ícone do mesmo grupo");return;}
+  const sourceIndex=items.findIndex(item=>item.id===source.id),targetIndex=items.findIndex(item=>item.id===target.id);
+  [items[sourceIndex],items[targetIndex]]=[items[targetIndex],items[sourceIndex]];
+  swapSourceId=null;
+  if(!persist(items)){showToast("Não foi possível trocar as posições");render();return;}
+  render();showToast("Posições trocadas");
 }
 function setOrganizeMode(enabled){
   organizeMode=!!enabled;
   selectedItems.clear();
+  swapSourceId=null;
   organizerBar.hidden=!organizeMode;
   setOrganizeMenuLabel(organizeMode?"Sair da organização":"Organizar biblioteca");
   document.body.classList.toggle("organize-mode",organizeMode);
@@ -345,13 +306,9 @@ function render(){
       if(organizeMode){
         card.classList.add("organize-card");
         card.classList.toggle("selected",selectedItems.has(item.id));
-        const select=document.createElement("button");select.type="button";select.className="organize-select";select.setAttribute("aria-label",`Selecionar ${item.name}`);select.setAttribute("aria-pressed",String(selectedItems.has(item.id)));select.textContent=selectedItems.has(item.id)?"✓":"";
-        select.addEventListener("click",e=>{e.stopPropagation();toggleSelection(item.id);});
         const tools=document.createElement("div");tools.className="organize-card-tools";
-        const previous=document.createElement("button");previous.type="button";previous.className="organize-move";previous.textContent="←";previous.setAttribute("aria-label","Mover uma posição para trás");previous.disabled=members[0].id===item.id;previous.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,-1);});
-        const drag=document.createElement("button");drag.type="button";drag.className="organize-drag";drag.innerHTML="<span aria-hidden=\"true\">⠿</span><small>arrastar</small>";drag.setAttribute("aria-label","Arrastar para reorganizar");
-        const next=document.createElement("button");next.type="button";next.className="organize-move";next.textContent="→";next.setAttribute("aria-label","Mover uma posição para frente");next.disabled=members[members.length-1].id===item.id;next.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,1);});
-        tools.append(previous,drag,next);card.append(select,tools);enableCardDrag(drag,card,key);
+        const swap=document.createElement("button");swap.type="button";swap.className="organize-swap";swap.classList.toggle("is-source",swapSourceId===item.id);swap.innerHTML=`<span aria-hidden="true">⇄</span><small>${swapSourceId===item.id?"Escolhido":"Trocar lugar"}</small>`;swap.setAttribute("aria-label",swapSourceId===item.id?`Cancelar troca de ${item.name}`:`Trocar lugar de ${item.name}`);swap.addEventListener("click",e=>{e.stopPropagation();swapItems(item.id);});
+        tools.append(swap);card.append(tools);
         main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
         copy.hidden=true;download.hidden=true;
       }else{
