@@ -108,7 +108,7 @@ for(const f of ['app.js','beta/app.js']){
 for(const f of ['enhancements.js','beta/enhancements.js']){
   if(!read(f).includes('const escapeHtml')) fail(`${f}: avisos de duplicata não escapam conteúdo do usuário`);
 }
-for(const f of ['app.js','core-safety-patch.js','enhancements.js','variant-intelligence.js']){
+for(const f of ['core-safety-patch.js','enhancements.js','variant-intelligence.js']){
   const betaFile=`beta/${f}`;
   if(!fs.readFileSync(f).equals(fs.readFileSync(betaFile))) fail(`${betaFile}: motor Beta divergiu do Oficial em ${f}`);
 }

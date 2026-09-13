@@ -1,6 +1,5 @@
 const STORAGE_KEY = "simbolos.library.v2";
 const LEGACY_KEY = "simbolos.library.v1";
-const GROUP_ICON_KEY="simbolos.beta.groupIcons.v1";
 const $ = s => document.querySelector(s);
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -22,7 +21,6 @@ if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.n
 els.family=familyInput;els.familyList=familyList;
 
 let items = loadItems();
-let groupIcons=loadGroupIcons();
 let draft = null;
 let activeVariantId = null;
 let toastTimer = null;
@@ -30,6 +28,7 @@ const collapsedFamilies=new Set();
 
 let organizeMode=false;
 const selectedItems=new Set();
+let swapSourceId=null;
 
 const organizeButton=document.createElement("button");
 organizeButton.id="organizeButton";
@@ -55,7 +54,6 @@ organizerBar.innerHTML=`
     <div id="organizerFamilyMatches" class="organizer-family-matches" role="listbox" hidden></div>
     <button id="organizerApplyFamilyButton" class="organizer-add-family" type="button">Adicionar ao grupo</button>
     <button id="organizerRemoveFamilyButton" class="organizer-remove-family" type="button" hidden>Tirar do grupo</button>
-    <button id="organizerGroupIconButton" class="organizer-group-icon" type="button" hidden>Usar como ícone do grupo</button>
   </div>
 `;
 document.body.appendChild(organizerBar);
@@ -67,7 +65,6 @@ const organizerFamilyList=document.getElementById("organizerFamilySuggestions");
 const organizerApplyFamily=document.getElementById("organizerApplyFamilyButton");
 const organizerRemoveFamily=document.getElementById("organizerRemoveFamilyButton");
 const organizerFamilyMatches=document.getElementById("organizerFamilyMatches");
-const organizerGroupIconButton=document.getElementById("organizerGroupIconButton");
 
 const symbolActionsDialog=document.createElement("dialog");
 symbolActionsDialog.id="symbolActionsDialog";
@@ -115,23 +112,6 @@ const duplicateWarningDetails=document.getElementById("duplicateWarningDetails")
 const duplicateReviewButton=document.getElementById("duplicateReviewButton");
 const duplicateSaveAnywayButton=document.getElementById("duplicateSaveAnywayButton");
 
-function loadGroupIcons(){
-  try{
-    const value=JSON.parse(localStorage.getItem(GROUP_ICON_KEY)||"{}");
-    return value&&typeof value==="object"&&!Array.isArray(value)?value:{};
-  }catch{return {};}
-}
-function persistGroupIcons(){
-  try{localStorage.setItem(GROUP_ICON_KEY,JSON.stringify(groupIcons));return true;}
-  catch(error){console.warn("Não foi possível salvar os ícones dos grupos:",error);return false;}
-}
-function pruneGroupIcons(){
-  let changed=false;
-  Object.entries(groupIcons).forEach(([family,itemId])=>{
-    if(!items.some(item=>item.id===itemId&&item.family===family)){delete groupIcons[family];changed=true;}
-  });
-  if(changed)persistGroupIcons();
-}
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
 function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#000000",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
@@ -261,99 +241,33 @@ function updateOrganizerBar(){
   const count=selectedItems.size;
   const selected=[...selectedItems].map(id=>items.find(item=>item.id===id)).filter(Boolean);
   const hasGrouped=selected.some(item=>!!item.family);
-  const singleGrouped=selected.length===1&&!!selected[0].family?selected[0]:null;
   organizerCount.textContent=`${count} ${count===1?"selecionado":"selecionados"}`;
   organizerApplyFamily.disabled=count===0||!organizerFamilyInput.value.trim();
   organizerRemoveFamily.hidden=!hasGrouped;
   organizerRemoveFamily.disabled=!hasGrouped;
-  organizerGroupIconButton.hidden=!singleGrouped;
-  if(singleGrouped){
-    const active=groupIcons[singleGrouped.family]===singleGrouped.id;
-    organizerGroupIconButton.dataset.active=String(active);
-    organizerGroupIconButton.textContent=active?"Remover ícone do grupo":"Usar como ícone do grupo";
-  }else{
-    organizerGroupIconButton.dataset.active="false";
-  }
 }
 function toggleSelection(id){
   if(selectedItems.has(id))selectedItems.delete(id);else selectedItems.add(id);
   updateOrganizerBar();
   const card=els.grid.querySelector(`.symbol-card[data-symbol-id="${CSS.escape(id)}"]`);
-  if(card){
-    card.classList.toggle("selected",selectedItems.has(id));
-    const b=card.querySelector(".organize-select");
-    if(b){b.setAttribute("aria-pressed",String(selectedItems.has(id)));b.textContent=selectedItems.has(id)?"✓":"";}
-  }
+  if(card)card.classList.toggle("selected",selectedItems.has(id));
 }
-function toggleSelectedGroupIcon(){
-  if(selectedItems.size!==1)return;
-  const id=[...selectedItems][0],item=items.find(entry=>entry.id===id);
-  if(!item?.family)return;
-  const family=item.family;
-  if(groupIcons[family]===item.id){
-    delete groupIcons[family];
-    if(!persistGroupIcons())return showToast("Não foi possível remover o ícone do grupo");
-    showToast(`Ícone removido de “${family}”`);
-  }else{
-    groupIcons[family]=item.id;
-    if(!persistGroupIcons())return showToast("Não foi possível salvar o ícone do grupo");
-    showToast(`“${item.name}” agora representa “${family}”`);
-  }
-  render();
-  updateOrganizerBar();
-}
-function moveItemWithinFamily(id,direction){
-  const item=items.find(x=>x.id===id);if(!item)return;
-  const key=familyKey(item),members=items.filter(x=>familyKey(x)===key),index=members.findIndex(x=>x.id===id),target=index+direction;
-  if(target<0||target>=members.length)return;
-  const a=items.findIndex(x=>x.id===members[index].id),b=items.findIndex(x=>x.id===members[target].id);
-  [items[a],items[b]]=[items[b],items[a]];
-  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");return;}
-  render();
-}
-function persistFamilyOrder(key,orderedIds){
-  const memberIndexes=items.map((item,index)=>familyKey(item)===key?index:-1).filter(index=>index>=0);
-  if(memberIndexes.length!==orderedIds.length)return;
-  const byId=new Map(items.map(item=>[item.id,item]));
-  const ordered=orderedIds.map(id=>byId.get(id)).filter(Boolean);
-  if(ordered.length!==memberIndexes.length)return;
-  memberIndexes.forEach((index,i)=>{items[index]=ordered[i];});
-  if(!persist(items)){showToast("Não foi possível salvar a nova ordem");render();}
-}
-function enableCardDrag(handle,card,key){
-  handle.addEventListener("pointerdown",event=>{
-    if(!organizeMode)return;
-    event.preventDefault();
-    const grid=card.parentElement;
-    const pointerId=event.pointerId;
-    card.classList.add("is-dragging");
-    try{handle.setPointerCapture(pointerId);}catch{}
-    const move=e=>{
-      if(e.clientY<90)window.scrollBy(0,-16);
-      else if(e.clientY>window.innerHeight-120)window.scrollBy(0,16);
-      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".symbol-card");
-      if(!target||target===card||target.parentElement!==grid)return;
-      const rect=target.getBoundingClientRect(),cardRect=card.getBoundingClientRect();
-      const sameRow=Math.abs(cardRect.top-rect.top)<rect.height*.45;
-      const before=sameRow?e.clientX<rect.left+rect.width/2:e.clientY<rect.top+rect.height/2;
-      grid.insertBefore(card,before?target:target.nextSibling);
-    };
-    const finish=()=>{
-      handle.removeEventListener("pointermove",move);
-      handle.removeEventListener("pointerup",finish);
-      handle.removeEventListener("pointercancel",finish);
-      card.classList.remove("is-dragging");
-      const ids=[...grid.querySelectorAll(".symbol-card[data-symbol-id]")].map(node=>node.dataset.symbolId);
-      persistFamilyOrder(key,ids);
-    };
-    handle.addEventListener("pointermove",move);
-    handle.addEventListener("pointerup",finish,{once:true});
-    handle.addEventListener("pointercancel",finish,{once:true});
-  });
+function swapItems(id){
+  if(!swapSourceId){swapSourceId=id;render();showToast("Agora toque em Trocar lugar no outro ícone");return;}
+  if(swapSourceId===id){swapSourceId=null;render();return;}
+  const source=items.find(item=>item.id===swapSourceId),target=items.find(item=>item.id===id);
+  if(!source||!target){swapSourceId=null;render();return;}
+  if(familyKey(source)!==familyKey(target)){showToast("Escolha outro ícone do mesmo grupo");return;}
+  const sourceIndex=items.findIndex(item=>item.id===source.id),targetIndex=items.findIndex(item=>item.id===target.id);
+  [items[sourceIndex],items[targetIndex]]=[items[targetIndex],items[sourceIndex]];
+  swapSourceId=null;
+  if(!persist(items)){showToast("Não foi possível trocar as posições");render();return;}
+  render();showToast("Posições trocadas");
 }
 function setOrganizeMode(enabled){
   organizeMode=!!enabled;
   selectedItems.clear();
+  swapSourceId=null;
   organizerBar.hidden=!organizeMode;
   setOrganizeMenuLabel(organizeMode?"Sair da organização":"Organizar biblioteca");
   document.body.classList.toggle("organize-mode",organizeMode);
@@ -376,23 +290,12 @@ function applyFamilyToSelection(value){
   showToast(family?`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para “${family}”`:`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para Outros`);
 }
 function render(){
-  pruneGroupIcons();
   const q=els.search.value.trim().toLocaleLowerCase("pt-BR"),filtered=items.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q)||item.variants.some(v=>v.label.toLocaleLowerCase("pt-BR").includes(q))); els.grid.innerHTML="";
   const named=[...new Set(filtered.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")),families=[...named,"Outros"];
   families.forEach(family=>{
     const members=filtered.filter(item=>family==="Outros"?!item.family:item.family===family);if(!members.length)return;
-    const section=document.createElement("section"),heading=document.createElement("button"),label=document.createElement("span"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"":family,collapseKey=family==="Outros"?"__others__":family;
-    section.className="family-section";heading.className="family-heading";heading.type="button";label.className="family-heading-label";title.className="family-heading-title";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";
-    if(family!=="Outros"){
-      const iconItem=items.find(item=>item.id===groupIcons[family]&&item.family===family);
-      if(iconItem){
-        const icon=document.createElement("span"),iconVariant=defaultVariant(iconItem);
-        icon.className="family-heading-icon";icon.setAttribute("aria-hidden","true");
-        icon.innerHTML=previewMarkup(iconVariant?.finalSvg||iconVariant?.originalSvg||"");
-        label.appendChild(icon);
-      }
-    }
-    label.appendChild(title);heading.append(label,arrow);inner.className="family-grid";inner.dataset.family=key;
+    const section=document.createElement("section"),heading=document.createElement("button"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"":family,collapseKey=family==="Outros"?"__others__":family;
+    section.className="family-section";heading.className="family-heading";heading.type="button";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";heading.append(title,arrow);inner.className="family-grid";inner.dataset.family=key;
     const setExpanded=expanded=>{heading.setAttribute("aria-expanded",String(expanded));heading.setAttribute("aria-label",`${expanded?"Recolher":"Expandir"} família ${family}`);inner.hidden=!expanded;section.classList.toggle("collapsed",!expanded);};
     setExpanded(!collapsedFamilies.has(collapseKey));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(collapseKey);else collapsedFamilies.delete(collapseKey);setExpanded(!expanded);});
     members.forEach(item=>{
@@ -403,13 +306,9 @@ function render(){
       if(organizeMode){
         card.classList.add("organize-card");
         card.classList.toggle("selected",selectedItems.has(item.id));
-        const select=document.createElement("button");select.type="button";select.className="organize-select";select.setAttribute("aria-label",`Selecionar ${item.name}`);select.setAttribute("aria-pressed",String(selectedItems.has(item.id)));select.textContent=selectedItems.has(item.id)?"✓":"";
-        select.addEventListener("click",e=>{e.stopPropagation();toggleSelection(item.id);});
         const tools=document.createElement("div");tools.className="organize-card-tools";
-        const previous=document.createElement("button");previous.type="button";previous.className="organize-move";previous.textContent="←";previous.setAttribute("aria-label","Mover uma posição para trás");previous.disabled=members[0].id===item.id;previous.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,-1);});
-        const drag=document.createElement("button");drag.type="button";drag.className="organize-drag";drag.innerHTML="<span aria-hidden=\"true\">⠿</span><small>arrastar</small>";drag.setAttribute("aria-label","Arrastar para reorganizar");
-        const next=document.createElement("button");next.type="button";next.className="organize-move";next.textContent="→";next.setAttribute("aria-label","Mover uma posição para frente");next.disabled=members[members.length-1].id===item.id;next.addEventListener("click",e=>{e.stopPropagation();moveItemWithinFamily(item.id,1);});
-        tools.append(previous,drag,next);card.append(select,tools);enableCardDrag(drag,card,key);
+        const swap=document.createElement("button");swap.type="button";swap.className="organize-swap";swap.classList.toggle("is-source",swapSourceId===item.id);swap.innerHTML=`<span aria-hidden="true">⇄</span><small>${swapSourceId===item.id?"Escolhido":"Trocar lugar"}</small>`;swap.setAttribute("aria-label",swapSourceId===item.id?`Cancelar troca de ${item.name}`:`Trocar lugar de ${item.name}`);swap.addEventListener("click",e=>{e.stopPropagation();swapItems(item.id);});
+        tools.append(swap);card.append(tools);
         main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
         copy.hidden=true;download.hidden=true;
       }else{
@@ -510,8 +409,8 @@ function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=new
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
 async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
-function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
-function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;if(data&&typeof data==="object"&&!Array.isArray(data)&&data.groupIcons&&typeof data.groupIcons==="object"&&!Array.isArray(data.groupIcons)){groupIcons={...groupIcons,...data.groupIcons};persistGroupIcons();}pruneGroupIcons();render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
+function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
+function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
 duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
 duplicateSaveAnywayButton.addEventListener("click",()=>{duplicateWarningDialog.close();commitDraft();});
@@ -529,7 +428,6 @@ organizeButton.addEventListener("click",()=>setOrganizeMode(!organizeMode));
 organizerDone.addEventListener("click",()=>setOrganizeMode(false));
 organizerApplyFamily.addEventListener("click",()=>applyFamilyToSelection(organizerFamilyInput.value));
 organizerRemoveFamily.addEventListener("click",()=>applyFamilyToSelection(""));
-organizerGroupIconButton.addEventListener("click",toggleSelectedGroupIcon);
 els.add.addEventListener("click",()=>openEditor()); els.emptyAdd.addEventListener("click",()=>openEditor()); els.cancel.addEventListener("click",closeEditor); els.save.addEventListener("click",saveDraft);
 els.name.addEventListener("input",()=>{if(draft)els.editorTitle.textContent=els.name.value.trim()||"Novo símbolo";}); els.variantLabel.addEventListener("input",()=>{const v=currentVariant();if(v){v.label=els.variantLabel.value;renderVariantTabs();els.previewVariantName.textContent=els.variantLabel.value||"Sem nome";}});
 els.defaultVariant.addEventListener("change",()=>{if(!draft)return;if(els.defaultVariant.checked){draft.defaultVariantId=activeVariantId;renderVariantTabs();}else{els.defaultVariant.checked=true;showToast("Sempre precisa existir uma versão padrão");}});
