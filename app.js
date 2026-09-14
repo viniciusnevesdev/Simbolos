@@ -1,5 +1,6 @@
 const STORAGE_KEY = "simbolos.library.v2";
 const LEGACY_KEY = "simbolos.library.v1";
+const GROUP_ICONS_KEY = "simbolos.official.group-icons.v1";
 const $ = s => document.querySelector(s);
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -21,6 +22,7 @@ if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.n
 els.family=familyInput;els.familyList=familyList;
 
 let items = loadItems();
+let groupIcons = loadGroupIcons();
 let draft = null;
 let activeVariantId = null;
 let toastTimer = null;
@@ -112,6 +114,30 @@ const duplicateWarningDetails=document.getElementById("duplicateWarningDetails")
 const duplicateReviewButton=document.getElementById("duplicateReviewButton");
 const duplicateSaveAnywayButton=document.getElementById("duplicateSaveAnywayButton");
 
+const groupIconDialog=document.createElement("dialog");
+groupIconDialog.id="groupIconDialog";
+groupIconDialog.className="group-icon-dialog";
+groupIconDialog.innerHTML=`
+  <div class="group-icon-card">
+    <div class="group-icon-head">
+      <div><small>Ícone do grupo</small><strong id="groupIconDialogTitle">—</strong></div>
+      <button id="groupIconDialogClose" type="button" aria-label="Fechar">×</button>
+    </div>
+    <p>Escolha qualquer símbolo salvo na biblioteca para aparecer ao lado do título.</p>
+    <input id="groupIconSearch" class="group-icon-search" type="search" placeholder="Buscar símbolo" autocomplete="off">
+    <button id="groupIconClear" class="group-icon-clear" type="button" hidden>Remover ícone do grupo</button>
+    <div id="groupIconPickerList" class="group-icon-picker-list" role="listbox"></div>
+  </div>
+`;
+document.body.appendChild(groupIconDialog);
+const groupIconDialogTitle=document.getElementById("groupIconDialogTitle");
+const groupIconDialogClose=document.getElementById("groupIconDialogClose");
+const groupIconSearch=document.getElementById("groupIconSearch");
+const groupIconClear=document.getElementById("groupIconClear");
+const groupIconPickerList=document.getElementById("groupIconPickerList");
+let editingGroupIconKey=null;
+let editingGroupIconName="";
+
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
 function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#000000",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
@@ -143,6 +169,16 @@ function loadItems(){
   return normalized;
 }
 function persist(nextItems=items){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextItems));return true;}catch(error){console.warn("Não foi possível salvar a biblioteca:",error);return false;} }
+function groupIconKey(family){return family==="Outros"?"__others__":String(family||"").trim().slice(0,40);}
+function normalizeGroupIcons(value){
+  if(!value||typeof value!=="object"||Array.isArray(value))return {};
+  return Object.fromEntries(Object.entries(value).flatMap(([family,id])=>{
+    const key=String(family||"").trim().slice(0,40),symbolId=typeof id==="string"?id.trim():"";
+    return (key&&symbolId)?[[key,symbolId]]:[];
+  }));
+}
+function loadGroupIcons(){try{return normalizeGroupIcons(JSON.parse(localStorage.getItem(GROUP_ICONS_KEY)||"{}"));}catch{return {};}}
+function persistGroupIcons(next=groupIcons){try{localStorage.setItem(GROUP_ICONS_KEY,JSON.stringify(next));return true;}catch{return false;}}
 function showToast(message){ clearTimeout(toastTimer); els.toast.textContent=message; els.toast.hidden=false; toastTimer=setTimeout(()=>els.toast.hidden=true,1800); }
 async function copyText(text){
   if (!text) throw new Error("empty");
@@ -219,6 +255,31 @@ function updateEditor(){
 }
 function defaultVariant(item){ return item.variants.find(v=>v.id===item.defaultVariantId)||item.variants[0]; }
 function previewMarkup(svg){ const parsed=parseSvg(svg); if(!parsed.ok)return""; const root=sanitize(parsed.root,true); root.setAttribute("width","62");root.setAttribute("height","62");return serializeSvg(root); }
+function groupIconMarkup(item){
+  const variant=item&&defaultVariant(item),parsed=parseSvg(variant?.finalSvg||variant?.originalSvg||"");
+  if(!parsed.ok)return"";
+  const root=sanitize(parsed.root,true);root.setAttribute("width","20");root.setAttribute("height","20");return serializeSvg(root);
+}
+function groupIconFor(family){return items.find(item=>item.id===groupIcons[groupIconKey(family)])||null;}
+function renderGroupIconPicker(){
+  if(!editingGroupIconKey)return;
+  const q=groupIconSearch.value.trim().toLocaleLowerCase("pt-BR"),selectedId=groupIcons[editingGroupIconKey]||"";
+  const matches=items.filter(item=>!q||item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q));
+  groupIconPickerList.innerHTML="";
+  matches.forEach(item=>{
+    const button=document.createElement("button"),preview=document.createElement("span"),copy=document.createElement("span"),name=document.createElement("strong"),meta=document.createElement("small");
+    button.type="button";button.className="group-icon-option";button.classList.toggle("selected",item.id===selectedId);button.setAttribute("role","option");button.setAttribute("aria-selected",String(item.id===selectedId));
+    preview.className="group-icon-option-preview";preview.innerHTML=groupIconMarkup(item);name.textContent=item.name;meta.textContent=item.family?`Grupo: ${item.family}`:"Sem grupo";copy.append(name,meta);button.append(preview,copy);
+    button.addEventListener("click",()=>{groupIcons={...groupIcons,[editingGroupIconKey]:item.id};if(!persistGroupIcons()){showToast("Não foi possível salvar o ícone do grupo");return;}const name=editingGroupIconName;render();closeGroupIconPicker();showToast(`Ícone definido para “${name}”`);});
+    groupIconPickerList.appendChild(button);
+  });
+  if(!matches.length)groupIconPickerList.innerHTML='<p class="group-icon-empty">Nenhum símbolo encontrado.</p>';
+  groupIconClear.hidden=!selectedId;
+}
+function openGroupIconPicker(family){
+  editingGroupIconKey=groupIconKey(family);editingGroupIconName=family;groupIconDialogTitle.textContent=family;groupIconSearch.value="";renderGroupIconPicker();groupIconDialog.showModal();setTimeout(()=>groupIconSearch.focus(),60);
+}
+function closeGroupIconPicker(){if(groupIconDialog.open)groupIconDialog.close();editingGroupIconKey=null;editingGroupIconName="";}
 function familyKey(item){ return item.family||""; }
 function existingFamilies(){
   return [...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -294,8 +355,10 @@ function render(){
   const named=[...new Set(filtered.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")),families=[...named,"Outros"];
   families.forEach(family=>{
     const members=filtered.filter(item=>family==="Outros"?!item.family:item.family===family);if(!members.length)return;
-    const section=document.createElement("section"),heading=document.createElement("button"),title=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"":family,collapseKey=family==="Outros"?"__others__":family;
-    section.className="family-section";heading.className="family-heading";heading.type="button";title.textContent=family;arrow.className="family-arrow";arrow.textContent="↓";heading.append(title,arrow);inner.className="family-grid";inner.dataset.family=key;
+    const section=document.createElement("section"),headingRow=document.createElement("div"),heading=document.createElement("button"),title=document.createElement("span"),label=document.createElement("span"),arrow=document.createElement("span"),inner=document.createElement("div"),key=family==="Outros"?"":family,collapseKey=family==="Outros"?"__others__":family,chosenGroupIcon=groupIconFor(family);
+    section.className="family-section";headingRow.className="family-heading-row";heading.className="family-heading";heading.type="button";title.className="family-title";label.className="family-title-label";label.textContent=family;if(!organizeMode&&chosenGroupIcon){const visual=document.createElement("span");visual.className="family-title-icon";visual.innerHTML=groupIconMarkup(chosenGroupIcon);title.append(visual);}title.append(label);arrow.className="family-arrow";arrow.innerHTML='<svg aria-hidden="true" viewBox="0 0 17.4688 10.3672" focusable="false"><path d="M8.53125 10.3672C8.75781 10.3672 8.96875 10.2656 9.125 10.0938L16.8281 2.07031C16.9766 1.92188 17.0625 1.73438 17.0625 1.51562C17.0625 1.07812 16.7266 0.742188 16.2812 0.742188C16.0781 0.742188 15.875 0.820312 15.7266 0.960938L8.05469 8.94531L9.01562 8.94531L1.32812 0.960938C1.1875 0.820312 0.992188 0.742188 0.78125 0.742188C0.335938 0.742188 0 1.07812 0 1.51562C0 1.73438 0.09375 1.92188 0.234375 2.07812L7.9375 10.1016C8.10938 10.2656 8.30469 10.3672 8.53125 10.3672Z" fill="currentColor" fill-opacity=".85"/></svg>';heading.append(title,arrow);inner.className="family-grid";inner.dataset.family=key;
+    if(organizeMode){const iconSlot=document.createElement("button");iconSlot.type="button";iconSlot.className="group-icon-slot";iconSlot.innerHTML=chosenGroupIcon?groupIconMarkup(chosenGroupIcon):'<span aria-hidden="true">+</span>';iconSlot.setAttribute("aria-label",chosenGroupIcon?`Trocar ícone do grupo ${family}`:`Adicionar ícone ao grupo ${family}`);iconSlot.addEventListener("click",()=>openGroupIconPicker(family));headingRow.append(iconSlot);}
+    headingRow.append(heading);
     const setExpanded=expanded=>{heading.setAttribute("aria-expanded",String(expanded));heading.setAttribute("aria-label",`${expanded?"Recolher":"Expandir"} família ${family}`);inner.hidden=!expanded;section.classList.toggle("collapsed",!expanded);};
     setExpanded(!collapsedFamilies.has(collapseKey));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(collapseKey);else collapsedFamilies.delete(collapseKey);setExpanded(!expanded);});
     members.forEach(item=>{
@@ -317,7 +380,7 @@ function render(){
       }
       inner.appendChild(node);
     });
-    section.append(heading,inner);els.grid.appendChild(section);
+    section.append(headingRow,inner);els.grid.appendChild(section);
   });
   const familiesForInputs=[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
   els.familyList.innerHTML="";organizerFamilyList.innerHTML="";
@@ -409,12 +472,16 @@ function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=new
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
 async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
-function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:2,exportedAt:new Date().toISOString(),symbols:items},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
-function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()];if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
+function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:3,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
+function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()],validIds=new Set(nextItems.map(x=>x.id)),incomingGroupIcons=normalizeGroupIcons(data?.groupIcons),nextGroupIcons={...groupIcons,...Object.fromEntries(Object.entries(incomingGroupIcons).filter(([,id])=>validIds.has(id)))};if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;groupIcons=nextGroupIcons;persistGroupIcons();render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
 duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
 duplicateSaveAnywayButton.addEventListener("click",()=>{duplicateWarningDialog.close();commitDraft();});
 duplicateWarningDialog.addEventListener("cancel",event=>{event.preventDefault();duplicateWarningDialog.close();});
+groupIconDialogClose.addEventListener("click",closeGroupIconPicker);
+groupIconDialog.addEventListener("cancel",event=>{event.preventDefault();closeGroupIconPicker();});
+groupIconSearch.addEventListener("input",renderGroupIconPicker);
+groupIconClear.addEventListener("click",()=>{if(!editingGroupIconKey)return;const next={...groupIcons};delete next[editingGroupIconKey];if(!persistGroupIcons(next)){showToast("Não foi possível salvar o ícone do grupo");return;}groupIcons=next;render();closeGroupIconPicker();showToast(`Ícone removido de “${editingGroupIconName}”`);});
 symbolActionsClose.addEventListener("click",closeSymbolActions);
 symbolActionsDialog.addEventListener("cancel",event=>{event.preventDefault();closeSymbolActions();});
 symbolActionsCopy.addEventListener("click",async()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});

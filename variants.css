@@ -185,6 +185,11 @@ body.organize-mode .search-field{opacity:.6}
 }
 
 
+/* Mantém as famílias em uma coluna mesmo se o ajuste dinâmico atrasar. */
+#symbolGrid.symbol-grid{
+  display:block!important;
+}
+
 /* 1.4.3 Beta — recolher/expandir grupos */
 #symbolGrid .family-grid[hidden]{
   display:none!important;
@@ -371,9 +376,31 @@ body.organize-mode .search-field{opacity:.6}
 @keyframes organize-demo-hand{0%,16%{transform:scale(.8);opacity:0}30%,65%{transform:scale(1.12);opacity:1}80%,100%{transform:scale(.85);opacity:0}}
 @media(prefers-reduced-motion:reduce){.organize-demo-tile,.organize-demo-gap,.organize-demo-hand{animation:none}.organize-demo-gap{opacity:.6}.organize-demo-hand{opacity:1;transform:translate(82px,-8px)}}
 
-/* 1.4.12 Beta — títulos de grupos recolhidos próximos */
+/* 1.5.2 Oficial — grupos recolhidos compactos */
 #symbolGrid .family-section.collapsed{
-  margin:0 0 3px!important;
+  margin:0!important;
+}
+#symbolGrid .family-section.collapsed .family-heading{
+  min-height:28px!important;
+  padding:0 2px!important;
+  line-height:1.05!important;
+}
+#symbolGrid .family-section.collapsed .family-arrow{
+  width:20px!important;
+  height:20px!important;
+  font-size:16px!important;
+}
+#symbolGrid .family-arrow{
+  width:20px!important;
+  height:20px!important;
+  border-radius:0!important;
+  background:transparent!important;
+  transition:transform .34s ease!important;
+}
+#symbolGrid .family-arrow svg{
+  width:14px;
+  height:8.3px;
+  display:block;
 }
 #symbolGrid .family-section.collapsed .family-grid{
   display:none!important;
@@ -383,3 +410,23 @@ body.organize-mode .search-field{opacity:.6}
   padding:0!important;
   overflow:hidden!important;
 }
+
+/* 1.5.2 Oficial — ícones de identificação dos grupos */
+#symbolGrid .family-heading-row{display:flex;align-items:center;gap:8px;min-width:0}
+#symbolGrid .family-heading-row .family-heading{flex:1 1 auto;min-width:0;width:auto!important}
+#symbolGrid .family-title{min-width:0;display:flex;align-items:center;gap:8px}
+#symbolGrid .family-title-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#symbolGrid .family-title-icon{flex:0 0 auto;width:22px;height:22px;display:grid;place-items:center;color:var(--text)}
+#symbolGrid .family-title-icon svg{display:block;max-width:20px!important;max-height:20px!important;width:20px!important;height:20px!important}
+#symbolGrid .group-icon-slot{flex:0 0 auto;width:28px;height:28px;padding:3px;border:1.5px dashed color-mix(in srgb,var(--accent) 60%,var(--line));border-radius:8px;background:color-mix(in srgb,var(--accent) 7%,transparent);color:var(--accent);display:grid;place-items:center}
+#symbolGrid .group-icon-slot:active{transform:scale(.94)}
+#symbolGrid .group-icon-slot>span{font-size:19px;font-weight:450;line-height:1}
+#symbolGrid .group-icon-slot svg{display:block;max-width:19px!important;max-height:19px!important;width:19px!important;height:19px!important}
+.group-icon-dialog{width:min(calc(100% - 28px),520px);max-width:none;max-height:min(82dvh,680px);margin:auto;padding:0;border:0;border-radius:24px;background:transparent}
+.group-icon-dialog::backdrop{background:rgba(0,0,0,.42);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.group-icon-card{max-height:min(82dvh,680px);display:flex;flex-direction:column;padding:18px;border:1px solid var(--line);border-radius:24px;background:var(--card);box-shadow:0 20px 54px rgba(0,0,0,.28)}
+.group-icon-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.group-icon-head small{display:block;margin-bottom:2px;color:var(--muted);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}.group-icon-head strong{display:block;font-size:20px;letter-spacing:-.025em}.group-icon-head button{width:32px;height:32px;border:0;border-radius:50%;background:var(--soft);color:var(--text);font-size:21px;line-height:1}
+.group-icon-card>p{margin:9px 0 12px;color:var(--muted);font-size:12px;line-height:1.38}.group-icon-search{width:100%;height:42px;padding:0 12px;border:1px solid var(--line);outline:0;border-radius:12px;background:var(--soft);color:var(--text);font-size:15px}.group-icon-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.group-icon-clear{min-height:34px;margin-top:9px;border:0;border-radius:10px;background:rgba(255,59,48,.12);color:var(--danger);font-size:12px;font-weight:750}.group-icon-clear[hidden]{display:none!important}
+.group-icon-picker-list{min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow:auto;margin-top:12px;padding:1px}.group-icon-option{min-width:0;min-height:92px;padding:8px 5px;border:1px solid var(--line);border-radius:13px;background:var(--soft);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center}.group-icon-option.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}.group-icon-option-preview{width:34px;height:34px;display:grid;place-items:center;color:var(--text)}.group-icon-option-preview svg{display:block;max-width:32px!important;max-height:32px!important;width:32px!important;height:32px!important}.group-icon-option strong,.group-icon-option small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.group-icon-option strong{font-size:10px;line-height:1.1}.group-icon-option small{color:var(--muted);font-size:8px}.group-icon-empty{grid-column:1/-1;margin:28px 0!important;text-align:center;color:var(--muted);font-size:13px!important}
+@media(min-width:520px){.group-icon-picker-list{grid-template-columns:repeat(4,minmax(0,1fr))}}
