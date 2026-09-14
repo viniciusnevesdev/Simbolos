@@ -185,6 +185,11 @@ body.organize-mode .search-field{opacity:.6}
 }
 
 
+/* Mantém as famílias em uma coluna mesmo se o ajuste dinâmico atrasar. */
+#symbolGrid.symbol-grid{
+  display:block!important;
+}
+
 /* 1.4.3 Beta — recolher/expandir grupos */
 #symbolGrid .family-grid[hidden]{
   display:none!important;
@@ -371,7 +376,7 @@ body.organize-mode .search-field{opacity:.6}
 @keyframes organize-demo-hand{0%,16%{transform:scale(.8);opacity:0}30%,65%{transform:scale(1.12);opacity:1}80%,100%{transform:scale(.85);opacity:0}}
 @media(prefers-reduced-motion:reduce){.organize-demo-tile,.organize-demo-gap,.organize-demo-hand{animation:none}.organize-demo-gap{opacity:.6}.organize-demo-hand{opacity:1;transform:translate(82px,-8px)}}
 
-/* 1.4.12 Beta — títulos de grupos recolhidos próximos */
+/* 1.4.13 Beta — títulos de grupos recolhidos próximos */
 #symbolGrid .family-section.collapsed{
   margin:0 0 3px!important;
 }
