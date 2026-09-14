@@ -390,6 +390,11 @@ body.organize-mode .search-field{opacity:.6}
   height:28px!important;
   font-size:16px!important;
 }
+#symbolGrid .family-arrow svg{
+  width:17.4688px;
+  height:10.3672px;
+  display:block;
+}
 #symbolGrid .family-section.collapsed .family-grid{
   display:none!important;
   height:0!important;
