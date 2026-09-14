@@ -376,9 +376,19 @@ body.organize-mode .search-field{opacity:.6}
 @keyframes organize-demo-hand{0%,16%{transform:scale(.8);opacity:0}30%,65%{transform:scale(1.12);opacity:1}80%,100%{transform:scale(.85);opacity:0}}
 @media(prefers-reduced-motion:reduce){.organize-demo-tile,.organize-demo-gap,.organize-demo-hand{animation:none}.organize-demo-gap{opacity:.6}.organize-demo-hand{opacity:1;transform:translate(82px,-8px)}}
 
-/* 1.4.13 Beta — títulos de grupos recolhidos próximos */
+/* 1.4.14 Beta — grupos recolhidos compactos */
 #symbolGrid .family-section.collapsed{
-  margin:0 0 3px!important;
+  margin:0!important;
+}
+#symbolGrid .family-section.collapsed .family-heading{
+  min-height:28px!important;
+  padding:0 2px!important;
+  line-height:1.05!important;
+}
+#symbolGrid .family-section.collapsed .family-arrow{
+  width:28px!important;
+  height:28px!important;
+  font-size:16px!important;
 }
 #symbolGrid .family-section.collapsed .family-grid{
   display:none!important;
