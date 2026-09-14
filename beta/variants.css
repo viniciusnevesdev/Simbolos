@@ -386,13 +386,20 @@ body.organize-mode .search-field{opacity:.6}
   line-height:1.05!important;
 }
 #symbolGrid .family-section.collapsed .family-arrow{
-  width:28px!important;
-  height:28px!important;
+  width:20px!important;
+  height:20px!important;
   font-size:16px!important;
 }
+#symbolGrid .family-arrow{
+  width:20px!important;
+  height:20px!important;
+  border-radius:0!important;
+  background:transparent!important;
+  transition:transform .34s ease!important;
+}
 #symbolGrid .family-arrow svg{
-  width:17.4688px;
-  height:10.3672px;
+  width:14px;
+  height:8.3px;
   display:block;
 }
 #symbolGrid .family-section.collapsed .family-grid{
