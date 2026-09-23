@@ -57,7 +57,7 @@ input[type="color"]{-webkit-appearance:none;appearance:none;flex:0 0 32px!import
 .organizer-family-input{min-width:0;height:40px;padding:0 11px;border:1px solid var(--line);outline:0;border-radius:11px;background:var(--soft);color:var(--text)}
 .organizer-group-tools button{min-height:40px;padding:0 11px;border:0;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:720}
 .organizer-group-tools button:disabled{opacity:.4}
-body.organize-mode .add-button{bottom:max(154px,calc(env(safe-area-inset-bottom) + 150px))!important}
+body.organize-mode .add-button{display:none!important}
 body.organize-mode .search-field{opacity:.6}
 .organize-card{overflow:hidden!important;outline:1px solid transparent;transition:outline-color .15s ease}
 .organize-card.selected{outline:2px solid var(--accent);outline-offset:2px}
@@ -72,7 +72,7 @@ body.organize-mode .search-field{opacity:.6}
 #symbolGrid[data-columns="5"] .organize-card-tools,#symbolGrid[data-columns="6"] .organize-card-tools{padding:5px}
 #symbolGrid[data-columns="5"] .organize-swap,#symbolGrid[data-columns="6"] .organize-swap{height:29px;border-radius:8px}
 #symbolGrid[data-columns="5"] .organize-swap small,#symbolGrid[data-columns="6"] .organize-swap small{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
-@media(max-width:520px){.organizer-group-tools{grid-template-columns:1fr 1fr}.organizer-family-input{grid-column:1/-1}.organizer-group-tools button{width:100%}body.organize-mode .add-button{bottom:max(190px,calc(env(safe-area-inset-bottom) + 186px))!important}}
+@media(max-width:520px){.organizer-group-tools{grid-template-columns:1fr 1fr}.organizer-family-input{grid-column:1/-1}.organizer-group-tools button{width:100%}}
 
 /* Pré-visualização padrão: preto puro */
 .card-preview{color:#000000!important;background:#f2f2f7!important}
@@ -96,7 +96,24 @@ body.organize-mode .search-field{opacity:.6}
   letter-spacing:-.01em!important;
   box-shadow:0 10px 26px rgba(0,0,0,.22)!important;
 }
-.add-button span{white-space:nowrap}
+.add-button{width:58px!important;min-width:58px!important;padding:0!important;display:grid!important;place-items:center!important}
+.add-button svg{width:24px;height:24px;display:block;fill:currentColor}
+
+/* 1.5.4 — inserção direta durante a organização */
+.family-grid{position:relative}
+.organize-insert{position:absolute;z-index:4;top:12%;right:-5px;width:10px;height:76%;padding:0;border:0;border-radius:7px;background:transparent;color:var(--accent);opacity:.72;touch-action:manipulation}
+.organize-insert::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;border-radius:1px;background:currentColor;box-shadow:0 0 0 1px color-mix(in srgb,var(--card) 72%,transparent)}
+.organize-insert:active{opacity:1;transform:scaleX(1.8)}
+.organize-insert-end{position:relative;top:auto;right:auto;align-self:stretch;justify-self:start;width:10px;min-height:50px;margin-left:-5px}
+.organize-insert-end::before{top:12%;bottom:12%}
+#symbolGrid[data-columns="5"] .organize-insert,#symbolGrid[data-columns="6"] .organize-insert{right:-4px;width:8px}
+#symbolGrid[data-columns="5"] .organize-insert::before,#symbolGrid[data-columns="6"] .organize-insert::before{left:3px}
+
+/* Prévia dos ícones de importar e exportar */
+.library-icon-preview{display:grid;place-items:center;min-height:0;overflow:hidden;transition:min-height .18s ease,margin .18s ease,opacity .18s ease;color:var(--accent)}
+.library-icon-preview[hidden]{display:none!important}
+.library-icon-preview svg{width:48px!important;height:48px!important;display:block;fill:currentColor}
+.menu-item-icon-preview{cursor:zoom-in}
 .symbol-actions-dialog{
   width:min(calc(100% - 28px),430px);
   max-width:none;
