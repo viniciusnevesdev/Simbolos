@@ -19,7 +19,7 @@
     const dialog=document.createElement("dialog");
     dialog.id="organizeDemoDialog";
     dialog.className="organize-demo-dialog";
-    dialog.innerHTML=`<div class="organize-demo-card"><button class="organize-demo-close" type="button" aria-label="Fechar demonstração">×</button><p class="eyebrow">Reorganizar</p><h2>Troque em dois toques</h2><p>Toque em <strong>Trocar lugar</strong> no primeiro ícone e depois no outro. Eles invertem as posições.</p><div class="organize-demo-motion" aria-hidden="true"><span class="organize-demo-tile tile-a">◇</span><span class="organize-demo-gap"></span><span class="organize-demo-tile tile-b">⌁</span><span class="organize-demo-hand">⇄</span></div><button class="organize-demo-done" type="button">Entendi</button></div>`;
+    dialog.innerHTML=`<div class="organize-demo-card"><button class="organize-demo-close" type="button" aria-label="Fechar demonstração">×</button><p class="eyebrow">Reorganizar</p><h2>Troque ou insira</h2><p>Toque em <strong>Trocar lugar</strong> para inverter com outro ícone ou toque na linha entre eles para inserir o escolhido naquela posição.</p><div class="organize-demo-motion" aria-hidden="true"><span class="organize-demo-tile tile-a">◇</span><span class="organize-demo-gap"></span><span class="organize-demo-tile tile-b">⌁</span><span class="organize-demo-hand">⇄</span></div><button class="organize-demo-done" type="button">Entendi</button></div>`;
     document.body.appendChild(dialog);
 
     const show=()=>{if(!dialog.open)dialog.showModal();};
