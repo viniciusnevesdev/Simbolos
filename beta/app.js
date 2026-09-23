@@ -13,6 +13,19 @@ const els = {
   copyDialog: $("#copyVariantsDialog"), copyTitle: $("#copyVariantsTitle"), copyList: $("#copyVariantsList"), closeCopyDialog: $("#closeCopyVariantsButton"), info: $("#infoDialog"), closeInfo: $("#closeInfoButton"), toast: $("#toast"), template: $("#symbolCardTemplate")
 };
 
+const ADD_ICON='<svg aria-hidden="true" viewBox="0 0 20.7578 20.3672" width="24" height="24"><g><rect height="20.3672" opacity="0" width="20.7578" x="0" y="0"/><path d="M20.3516 10.1797C20.3516 15.7812 15.7812 20.3516 10.1719 20.3516C4.57031 20.3516 0 15.7812 0 10.1797C0 4.57031 4.57031 0 10.1719 0C15.7812 0 20.3516 4.57031 20.3516 10.1797ZM9.42969 6.19531L9.42969 9.42188L6.20312 9.42188C5.75781 9.42188 5.4375 9.72656 5.4375 10.1797C5.4375 10.6094 5.75781 10.9062 6.20312 10.9062L9.42969 10.9062L9.42969 14.1406C9.42969 14.5781 9.73438 14.8984 10.1641 14.8984C10.6094 14.8984 10.9141 14.5859 10.9141 14.1406L10.9141 10.9062L14.1562 10.9062C14.5859 10.9062 14.9062 10.6094 14.9062 10.1797C14.9062 9.72656 14.5938 9.42188 14.1562 9.42188L10.9141 9.42188L10.9141 6.19531C10.9141 5.74219 10.6094 5.42969 10.1641 5.42969C9.73438 5.42969 9.42969 5.75 9.42969 6.19531Z" fill="currentColor" fill-opacity="0.85"/></g></svg>';
+const IMPORT_ICON='<svg class="menu-item-icon menu-item-icon-preview" aria-hidden="true" viewBox="0 0 15.5312 20.5078" width="24" height="24"><g><rect height="20.5078" opacity="0" width="15.5312" x="0" y="0"/><path d="M15.125 19.75C15.125 19.3047 14.8203 18.9844 14.3828 18.9844L0.757812 18.9844C0.3125 18.9844 0 19.3047 0 19.75C0 20.1875 0.3125 20.5078 0.757812 20.5078L14.3828 20.5078C14.8203 20.5078 15.125 20.1875 15.125 19.75ZM0.734375 10.6797C0.3125 10.6797 0 11.0078 0 11.4297C0 11.6328 0.0703125 11.8125 0.234375 11.9766L6.99219 18.7344C7.15625 18.9062 7.35156 18.9922 7.5625 18.9922C7.77344 18.9922 7.96875 18.9062 8.13281 18.7344L14.8906 11.9766C15.0547 11.8125 15.125 11.6328 15.125 11.4297C15.125 11.0078 14.8125 10.6797 14.3906 10.6797C14.1875 10.6797 13.9766 10.7578 13.8516 10.8906L11.0781 13.625L7.5625 17.4453L4.04688 13.625L1.27344 10.8906C1.14844 10.7578 0.9375 10.6797 0.734375 10.6797ZM8.22656 17.5469L8.32031 14.5391L8.32031 0.789062C8.32031 0.351562 8.00781 0.0390625 7.5625 0.0390625C7.11719 0.0390625 6.80469 0.351562 6.80469 0.789062L6.80469 14.5391L6.89844 17.5469C6.91406 17.9062 7.20312 18.2031 7.5625 18.2031C7.92188 18.2031 8.21094 17.9062 8.22656 17.5469Z" fill="currentColor" fill-opacity="0.85"/></g></svg>';
+const EXPORT_ICON='<svg class="menu-item-icon menu-item-icon-preview" aria-hidden="true" viewBox="0 0 15.5312 17.6641" width="24" height="24"><g><rect height="17.6641" opacity="0" width="15.5312" x="0" y="0"/><path d="M15.125 0.765625C15.125 0.320312 14.8203 0 14.3828 0L0.757812 0C0.3125 0 0 0.320312 0 0.765625C0 1.21094 0.3125 1.53125 0.757812 1.53125L14.3828 1.53125C14.8203 1.53125 15.125 1.21094 15.125 0.765625ZM0.734375 9.83594C0.9375 9.83594 1.14844 9.75781 1.27344 9.625L4.04688 6.88281L7.5625 3.07031L11.0781 6.88281L13.8516 9.625C13.9766 9.75781 14.1875 9.83594 14.3906 9.83594C14.8125 9.83594 15.125 9.50781 15.125 9.08594C15.125 8.88281 15.0547 8.70312 14.8906 8.53125L8.13281 1.78125C7.96875 1.60938 7.77344 1.51562 7.5625 1.51562C7.35156 1.51562 7.15625 1.60938 6.99219 1.78125L0.234375 8.53125C0.0703125 8.70312 0 8.88281 0 9.08594C0 9.50781 0.3125 9.83594 0.734375 9.83594ZM8.22656 2.96875C8.21094 2.60938 7.92188 2.3125 7.5625 2.3125C7.20312 2.3125 6.91406 2.60938 6.89844 2.96875L6.80469 5.97656L6.80469 16.9141C6.80469 17.3516 7.11719 17.6641 7.5625 17.6641C8.00781 17.6641 8.32031 17.3516 8.32031 16.9141L8.32031 5.97656Z" fill="currentColor" fill-opacity="0.85"/></g></svg>';
+els.add.innerHTML=ADD_ICON;
+els.exportButton.querySelector("svg")?.replaceWith(document.createRange().createContextualFragment(EXPORT_ICON));
+els.importButton.querySelector("svg")?.replaceWith(document.createRange().createContextualFragment(IMPORT_ICON));
+const libraryIconPreview=document.createElement("div");
+libraryIconPreview.className="library-icon-preview";
+libraryIconPreview.hidden=true;
+els.libraryMenu.insertBefore(libraryIconPreview,els.libraryMenu.firstChild);
+function showLibraryIconPreview(icon,label){libraryIconPreview.innerHTML=icon;libraryIconPreview.setAttribute("aria-label",`Prévia: ${label}`);libraryIconPreview.hidden=false;}
+function clickedLibraryIcon(event,icon,label){if(!event.target.closest(".menu-item-icon-preview"))return false;event.preventDefault();event.stopPropagation();showLibraryIconPreview(icon,label);return true;}
+
 const familyLabel=document.createElement("label"),familyInput=document.createElement("input"),familyList=document.createElement("datalist");
 familyLabel.className="field-label";familyLabel.htmlFor="familyInput";familyLabel.textContent="Grupo";
 familyInput.id="familyInput";familyInput.className="text-input";familyInput.type="text";familyInput.maxLength=40;familyInput.placeholder="Grupo";familyInput.setAttribute("list","familySuggestions");
@@ -313,6 +326,7 @@ function toggleSelection(id){
   const card=els.grid.querySelector(`.symbol-card[data-symbol-id="${CSS.escape(id)}"]`);
   if(card)card.classList.toggle("selected",selectedItems.has(id));
 }
+function sourceNameForInsert(){return items.find(item=>item.id===swapSourceId)?.name||"ícone";}
 function swapItems(id){
   if(!swapSourceId){swapSourceId=id;render();showToast("Agora toque em Trocar lugar no outro ícone");return;}
   if(swapSourceId===id){swapSourceId=null;render();return;}
@@ -324,6 +338,19 @@ function swapItems(id){
   swapSourceId=null;
   if(!persist(items)){showToast("Não foi possível trocar as posições");render();return;}
   render();showToast("Posições trocadas");
+}
+function moveItemToPosition(beforeId,family){
+  if(!swapSourceId)return;
+  const source=items.find(item=>item.id===swapSourceId),target=beforeId?items.find(item=>item.id===beforeId):null;
+  if(!source||(beforeId&&!target)){swapSourceId=null;render();return;}
+  if(familyKey(source)!==family||target&&familyKey(target)!==family){showToast("Escolha uma posição no mesmo grupo");return;}
+  const sourceIndex=items.findIndex(item=>item.id===source.id);
+  items.splice(sourceIndex,1);
+  const insertIndex=target?items.findIndex(item=>item.id===target.id):items.reduce((last,item,index)=>familyKey(item)===family?index+1:last,0);
+  items.splice(Math.max(0,insertIndex),0,source);
+  swapSourceId=null;
+  if(!persist(items)){showToast("Não foi possível mover o ícone");render();return;}
+  render();showToast("Ícone movido");
 }
 function setOrganizeMode(enabled){
   organizeMode=!!enabled;
@@ -372,6 +399,11 @@ function render(){
         const tools=document.createElement("div");tools.className="organize-card-tools";
         const swap=document.createElement("button");swap.type="button";swap.className="organize-swap";swap.classList.toggle("is-source",swapSourceId===item.id);swap.innerHTML=`<span aria-hidden="true">⇄</span><small>${swapSourceId===item.id?"Escolhido":"Trocar lugar"}</small>`;swap.setAttribute("aria-label",swapSourceId===item.id?`Cancelar troca de ${item.name}`:`Trocar lugar de ${item.name}`);swap.addEventListener("click",e=>{e.stopPropagation();swapItems(item.id);});
         tools.append(swap);card.append(tools);
+        if(swapSourceId&&swapSourceId!==item.id&&familyKey(item)===familyKey(items.find(candidate=>candidate.id===swapSourceId))){
+          const insert=document.createElement("button");
+          insert.type="button";insert.className="organize-insert";insert.setAttribute("aria-label",`Inserir ${sourceNameForInsert()} antes de ${item.name}`);insert.title="Inserir nesta posição";
+          insert.addEventListener("click",e=>{e.stopPropagation();moveItemToPosition(item.id,key);});card.append(insert);
+        }
         main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
         copy.hidden=true;download.hidden=true;
       }else{
@@ -380,6 +412,11 @@ function render(){
       }
       inner.appendChild(node);
     });
+    if(organizeMode&&swapSourceId&&members.some(item=>item.id===swapSourceId)){
+      const endInsert=document.createElement("button");
+      endInsert.type="button";endInsert.className="organize-insert organize-insert-end";endInsert.setAttribute("aria-label",`Inserir ${sourceNameForInsert()} ao final de ${family}`);endInsert.title="Inserir no final do grupo";
+      endInsert.addEventListener("click",()=>moveItemToPosition(null,key));inner.append(endInsert);
+    }
     section.append(headingRow,inner);els.grid.appendChild(section);
   });
   const familiesForInputs=[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -501,6 +538,6 @@ els.defaultVariant.addEventListener("change",()=>{if(!draft)return;if(els.defaul
 els.addVariant.addEventListener("click",addVariant); els.deleteVariant.addEventListener("click",deleteActiveVariant); els.deleteSymbol.addEventListener("click",deleteWholeSymbol); els.svg.addEventListener("input",updateEditor); els.previewColor.addEventListener("input",updateEditor); els.fixedColor.addEventListener("input",updateEditor); els.cleanup.addEventListener("change",updateEditor);
 document.querySelectorAll('input[name="colorMode"],input[name="sizeMode"]').forEach(x=>x.addEventListener("change",updateEditor)); els.strokeInput.addEventListener("input",()=>{els.strokeInput.dataset.override="true";els.strokeOutput.value=els.strokeInput.value;updateEditor();}); els.restoreStroke.addEventListener("click",()=>{els.strokeInput.dataset.override="false";updateEditor();});
 els.paste.addEventListener("click",pasteSvg); els.format.addEventListener("click",()=>{const parsed=parseSvg(els.svg.value);if(!parsed.ok)return showToast(parsed.error);els.svg.value=serializeSvg(parsed.root);updateEditor();}); els.copyOutput.addEventListener("click",async()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);try{await copyText(result.output);showToast(`SVG · ${els.variantLabel.value||"versão"} copiado`);}catch{showToast("Não foi possível copiar");}}); els.downloadOutput.addEventListener("click",()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);downloadSvg({name:els.name.value.trim()||"simbolo"},{label:els.variantLabel.value.trim()||"versao",finalSvg:result.output});});
-els.search.addEventListener("input",render); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target))els.libraryMenu.hidden=true;}); els.exportButton.addEventListener("click",exportLibrary); els.importButton.addEventListener("click",()=>{els.libraryMenu.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
+els.search.addEventListener("input",render); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;if(els.libraryMenu.hidden)libraryIconPreview.hidden=true;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target)){els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;}}); els.exportButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,EXPORT_ICON,"Exportar biblioteca"))return;exportLibrary();}); els.importButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,IMPORT_ICON,"Importar biblioteca"))return;els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
 
 render(); if("serviceWorker" in navigator && window.APP_CONFIG?.enableServiceWorker)navigator.serviceWorker.register("./sw.js").catch(()=>{});
