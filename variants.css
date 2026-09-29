@@ -101,13 +101,37 @@ body.organize-mode .search-field{opacity:.6}
 
 /* 1.5.4 — inserção direta durante a organização */
 .family-grid{position:relative}
-.organize-insert{position:absolute;z-index:4;top:12%;right:-5px;width:10px;height:76%;padding:0;border:0;border-radius:7px;background:transparent;color:var(--accent);opacity:.72;touch-action:manipulation}
-.organize-insert::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;border-radius:1px;background:currentColor;box-shadow:0 0 0 1px color-mix(in srgb,var(--card) 72%,transparent)}
-.organize-insert:active{opacity:1;transform:scaleX(1.8)}
-.organize-insert-end{position:relative;top:auto;right:auto;align-self:stretch;justify-self:start;width:10px;min-height:50px;margin-left:-5px}
-.organize-insert-end::before{top:12%;bottom:12%}
-#symbolGrid[data-columns="5"] .organize-insert,#symbolGrid[data-columns="6"] .organize-insert{right:-4px;width:8px}
-#symbolGrid[data-columns="5"] .organize-insert::before,#symbolGrid[data-columns="6"] .organize-insert::before{left:3px}
+.organize-insert{
+  position:absolute;
+  z-index:20;
+  top:8%;
+  right:-2px;
+  width:20px;
+  height:84%;
+  padding:0;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--accent);
+  opacity:1;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.organize-insert::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  right:2px;
+  width:4px;
+  border-radius:999px;
+  background:currentColor;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--card) 78%,transparent),0 0 8px color-mix(in srgb,var(--accent) 38%,transparent);
+}
+.organize-insert:active::before{
+  width:6px;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--card) 72%,transparent),0 0 12px color-mix(in srgb,var(--accent) 55%,transparent);
+}
 
 /* Prévia dos ícones de importar e exportar */
 .library-icon-preview{display:grid;place-items:center;min-height:0;overflow:hidden;transition:min-height .18s ease,margin .18s ease,opacity .18s ease;color:var(--accent)}
