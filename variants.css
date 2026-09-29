@@ -477,3 +477,55 @@ body.organize-mode .search-field{opacity:.6}
 /* Palavras-chave dos símbolos */
 .keywords-input{margin-top:0;height:auto!important;min-height:46px;max-height:none!important;overflow-y:hidden!important;resize:none;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;padding:11px 12px;field-sizing:content}
 .keywords-help{display:block;margin-top:7px;color:var(--muted);font-size:11px;line-height:1.35}
+
+
+/* Botões flutuantes da biblioteca */
+.add-button{
+  width:58px!important;
+  min-width:58px!important;
+  height:58px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  display:grid!important;
+  place-items:center!important;
+}
+#organizeButton.floating-organize-button{
+  position:fixed!important;
+  z-index:34!important;
+  right:max(18px,calc((100vw - 980px)/2 + 18px))!important;
+  bottom:max(92px,calc(env(safe-area-inset-bottom) + 88px))!important;
+  width:58px!important;
+  min-width:58px!important;
+  height:58px!important;
+  padding:0!important;
+  border:1px solid var(--line)!important;
+  border-radius:50%!important;
+  background:var(--card)!important;
+  color:var(--text)!important;
+  display:grid!important;
+  place-items:center!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.2),0 1px 0 var(--line)!important;
+}
+#organizeButton.floating-organize-button svg{
+  width:26px!important;
+  height:26px!important;
+  display:block;
+  fill:currentColor;
+}
+#organizeButton.floating-organize-button.is-active{
+  background:var(--accent)!important;
+  color:#fff!important;
+  border-color:transparent!important;
+}
+body.organize-mode #organizeButton.floating-organize-button{
+  bottom:max(22px,calc(env(safe-area-inset-bottom) + 18px))!important;
+}
+@media(max-width:390px){
+  .add-button{
+    width:58px!important;
+    min-width:58px!important;
+    height:58px!important;
+    padding:0!important;
+    border-radius:50%!important;
+  }
+}
