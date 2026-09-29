@@ -38,7 +38,10 @@ const tagsLabel=document.createElement("label"),tagsInput=document.createElement
 tagsLabel.className="field-label field-spaced";tagsLabel.htmlFor="tagsInput";tagsLabel.textContent="Palavras-chave / tags";
 tagsInput.id="tagsInput";tagsInput.className="text-input keywords-input";tagsInput.type="text";tagsInput.maxLength=800;tagsInput.placeholder="Ex.: casa, início, home, lar";tagsInput.autocomplete="off";
 tagsHelp.className="keywords-help";tagsHelp.textContent="Separe por vírgulas. A busca considera título, grupo, versões e estas palavras-chave.";
-if(familySlot){familySlot.append(tagsLabel,tagsInput,tagsHelp);}else{familyInput.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
+const quickEntryCard=els.name.closest(".quick-entry-card");
+if(quickEntryCard){els.name.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
+else if(familySlot){familySlot.insertAdjacentElement("beforebegin",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
+else{familyInput.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
 els.tags=tagsInput;
 
 let items = loadItems();
