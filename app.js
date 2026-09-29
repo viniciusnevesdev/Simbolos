@@ -44,11 +44,23 @@ else if(familySlot){familySlot.insertAdjacentElement("beforebegin",tagsLabel);ta
 else{familyInput.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
 els.tags=tagsInput;
 function resizeTagsInput(){
-  els.tags.style.height="auto";
-  els.tags.style.height=`${Math.max(46,els.tags.scrollHeight)}px`;
+  if(!els.tags)return;
+  els.tags.style.height="0px";
+  const nextHeight=Math.max(46,Math.ceil(els.tags.scrollHeight)+4);
+  els.tags.style.height=`${nextHeight}px`;
 }
-els.tags.addEventListener("input",resizeTagsInput);
-window.addEventListener("resize",resizeTagsInput);
+function scheduleTagsResize(){
+  resizeTagsInput();
+  requestAnimationFrame(()=>requestAnimationFrame(resizeTagsInput));
+  setTimeout(resizeTagsInput,80);
+  setTimeout(resizeTagsInput,220);
+}
+els.tags.addEventListener("input",scheduleTagsResize);
+window.addEventListener("resize",scheduleTagsResize);
+if("ResizeObserver" in window){
+  const tagsResizeObserver=new ResizeObserver(()=>resizeTagsInput());
+  tagsResizeObserver.observe(els.tags);
+}
 
 let items = loadItems();
 let groupIcons = loadGroupIcons();
@@ -479,7 +491,7 @@ function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els
 function openEditor(id=null){
   if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.tags.value=normalizeTags(item.tags).join(", "); els.deleteSymbol.hidden=false; }
   else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",tags:[],variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.tags.value=""; els.deleteSymbol.hidden=true; }
-  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); resizeTagsInput(); els.editor.showModal(); requestAnimationFrame(resizeTagsInput); document.body.classList.add("dialog-open");
+  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); scheduleTagsResize(); document.body.classList.add("dialog-open");
 }
 function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
 function validateDraft(){
