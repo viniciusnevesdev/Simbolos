@@ -157,6 +157,16 @@ const duplicateWarningDetails=document.getElementById("duplicateWarningDetails")
 const duplicateReviewButton=document.getElementById("duplicateReviewButton");
 const duplicateSaveAnywayButton=document.getElementById("duplicateSaveAnywayButton");
 
+const liveDuplicateWarning=document.createElement("section");
+liveDuplicateWarning.id="liveDuplicateWarning";
+liveDuplicateWarning.className="duplicate-warning";
+liveDuplicateWarning.hidden=true;
+liveDuplicateWarning.setAttribute("role","status");
+liveDuplicateWarning.setAttribute("aria-live","polite");
+liveDuplicateWarning.innerHTML=`<div class="duplicate-warning-icon" aria-hidden="true">!</div><div class="duplicate-warning-copy"><strong>Já existe na biblioteca</strong><div id="liveDuplicateWarningText"></div></div>`;
+quickEntryCard?.after(liveDuplicateWarning);
+const liveDuplicateWarningText=document.getElementById("liveDuplicateWarningText");
+
 const groupIconDialog=document.createElement("dialog");
 groupIconDialog.id="groupIconDialog";
 groupIconDialog.className="group-icon-dialog";
@@ -293,7 +303,7 @@ function stashCurrent(){
 }
 function loadVariantToUI(id){
   const v=draft?.variants.find(x=>x.id===id); if(!v)return; activeVariantId=id; els.variantLabel.value=v.label; els.svg.value=v.originalSvg; setRadio("colorMode",v.options.colorMode||"currentColor"); setRadio("sizeMode",v.options.sizeMode||"24"); els.fixedColor.value=v.options.fixedColor||"#000000"; els.cleanup.checked=v.options.cleanup!==false; els.defaultVariant.checked=draft.defaultVariantId===v.id;
-  els.strokeInput.dataset.override=v.options.strokeOverride==null?"false":"true"; els.strokeInput.value=String(v.options.strokeOverride??1.5); renderVariantTabs(); updateEditor();
+  els.strokeInput.dataset.override=v.options.strokeOverride==null?"false":"true"; els.strokeInput.value=String(v.options.strokeOverride??1.5); renderVariantTabs(); updateEditor(); updateLiveDuplicateWarning();
 }
 function renderVariantTabs(){
   els.variantTabs.innerHTML=""; if(!draft)return;
@@ -503,9 +513,9 @@ function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els
 function openEditor(id=null){
   if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.tags.value=normalizeTags(item.tags).join(", "); els.deleteSymbol.hidden=false; }
   else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",tags:[],variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.tags.value=""; els.deleteSymbol.hidden=true; }
-  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); scheduleTagsResize(); document.body.classList.add("dialog-open");
+  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); scheduleTagsResize(); updateLiveDuplicateWarning(); document.body.classList.add("dialog-open");
 }
-function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
+function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; updateLiveDuplicateWarning(); }
 function validateDraft(){
   const name=els.name.value.trim(); if(!name)return {ok:false,error:"Dê um título ao símbolo",focus:els.name}; stashCurrent(); draft.name=name; draft.family=els.family.value.trim().slice(0,40); draft.tags=normalizeTags(els.tags.value);
   for(const v of draft.variants){ if(!v.label.trim())return {ok:false,error:"Dê um nome para cada versão"}; const result=transformSvg(v.originalSvg,v.options); if(!result.ok)return {ok:false,error:`${v.label}: ${result.error}`}; v.finalSvg=result.output; }
@@ -518,6 +528,34 @@ function duplicateKeySvg(value){
   if(!parsed.ok)return source.replace(/\s+/g," ");
   try{return serializeSvg(parsed.root).replace(/>\s+</g,"><").replace(/\s+/g," ").trim();}catch{return source.replace(/\s+/g," ");}
 }
+function collectLiveDuplicates(){
+  if(!draft)return {titles:[],svgs:[]};
+  const title=String(els.name.value||"").trim().replace(/\s+/g," ").toLocaleLowerCase("pt-BR");
+  const svgKey=duplicateKeySvg(els.svg.value);
+  const titles=[],svgs=[];
+  items.forEach(item=>{
+    if(item.id===draft.id)return;
+    if(title&&String(item.name||"").trim().replace(/\s+/g," ").toLocaleLowerCase("pt-BR")===title)titles.push(item.name);
+    if(svgKey){
+      (item.variants||[]).forEach(variant=>{
+        const original=duplicateKeySvg(variant.originalSvg);
+        const final=duplicateKeySvg(variant.finalSvg);
+        if((original&&original===svgKey)||(final&&final===svgKey))svgs.push(`${item.name} · ${variant.label||"versão"}`);
+      });
+    }
+  });
+  return {titles:[...new Set(titles)],svgs:[...new Set(svgs)]};
+}
+function updateLiveDuplicateWarning(){
+  if(!liveDuplicateWarning||!liveDuplicateWarningText)return;
+  if(!draft){liveDuplicateWarning.hidden=true;liveDuplicateWarningText.innerHTML="";return;}
+  const duplicates=collectLiveDuplicates(),parts=[];
+  if(duplicates.titles.length)parts.push(`<p><strong>Título já existente.</strong> Encontrado em ${duplicates.titles.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}.</p>`);
+  if(duplicates.svgs.length)parts.push(`<p><strong>Código SVG já existente.</strong> Encontrado em ${duplicates.svgs.map(name=>`“${escapeDuplicateText(name)}”`).join(", ")}.</p>`);
+  liveDuplicateWarningText.innerHTML=parts.join("");
+  liveDuplicateWarning.hidden=parts.length===0;
+}
+
 function findDraftDuplicates(){
   if(!draft)return {titles:[],svgs:[]};
   const title=String(draft.name||els.name.value||"").trim().toLocaleLowerCase("pt-BR");
@@ -567,7 +605,7 @@ function saveDraft(){
 function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=newVariant(`Versão ${count}`); draft.variants.push(v); loadVariantToUI(v.id); setTimeout(()=>{els.variantLabel.focus();els.variantLabel.select();},50); }
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
-async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
+async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor();updateLiveDuplicateWarning(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:4,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()],validIds=new Set(nextItems.map(x=>x.id)),incomingGroupIcons=normalizeGroupIcons(data?.groupIcons),nextGroupIcons={...groupIcons,...Object.fromEntries(Object.entries(incomingGroupIcons).filter(([,id])=>validIds.has(id)))};if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;groupIcons=nextGroupIcons;persistGroupIcons();render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
@@ -592,11 +630,11 @@ organizerDone.addEventListener("click",()=>setOrganizeMode(false));
 organizerApplyFamily.addEventListener("click",()=>applyFamilyToSelection(organizerFamilyInput.value));
 organizerRemoveFamily.addEventListener("click",()=>applyFamilyToSelection(""));
 els.add.addEventListener("click",()=>openEditor()); els.emptyAdd.addEventListener("click",()=>openEditor()); els.cancel.addEventListener("click",closeEditor); els.save.addEventListener("click",saveDraft);
-els.name.addEventListener("input",()=>{if(draft)els.editorTitle.textContent=els.name.value.trim()||"Novo símbolo";}); els.variantLabel.addEventListener("input",()=>{const v=currentVariant();if(v){v.label=els.variantLabel.value;renderVariantTabs();els.previewVariantName.textContent=els.variantLabel.value||"Sem nome";}});
+els.name.addEventListener("input",()=>{if(draft)els.editorTitle.textContent=els.name.value.trim()||"Novo símbolo";updateLiveDuplicateWarning();}); els.variantLabel.addEventListener("input",()=>{const v=currentVariant();if(v){v.label=els.variantLabel.value;renderVariantTabs();els.previewVariantName.textContent=els.variantLabel.value||"Sem nome";}});
 els.defaultVariant.addEventListener("change",()=>{if(!draft)return;if(els.defaultVariant.checked){draft.defaultVariantId=activeVariantId;renderVariantTabs();}else{els.defaultVariant.checked=true;showToast("Sempre precisa existir uma versão padrão");}});
-els.addVariant.addEventListener("click",addVariant); els.deleteVariant.addEventListener("click",deleteActiveVariant); els.deleteSymbol.addEventListener("click",deleteWholeSymbol); els.svg.addEventListener("input",updateEditor); els.previewColor.addEventListener("input",updateEditor); els.fixedColor.addEventListener("input",updateEditor); els.cleanup.addEventListener("change",updateEditor);
+els.addVariant.addEventListener("click",addVariant); els.deleteVariant.addEventListener("click",deleteActiveVariant); els.deleteSymbol.addEventListener("click",deleteWholeSymbol); els.svg.addEventListener("input",()=>{updateEditor();updateLiveDuplicateWarning();}); els.previewColor.addEventListener("input",updateEditor); els.fixedColor.addEventListener("input",updateEditor); els.cleanup.addEventListener("change",updateEditor);
 document.querySelectorAll('input[name="colorMode"],input[name="sizeMode"]').forEach(x=>x.addEventListener("change",updateEditor)); els.strokeInput.addEventListener("input",()=>{els.strokeInput.dataset.override="true";els.strokeOutput.value=els.strokeInput.value;updateEditor();}); els.restoreStroke.addEventListener("click",()=>{els.strokeInput.dataset.override="false";updateEditor();});
-els.paste.addEventListener("click",pasteSvg); els.format.addEventListener("click",()=>{const parsed=parseSvg(els.svg.value);if(!parsed.ok)return showToast(parsed.error);els.svg.value=serializeSvg(parsed.root);updateEditor();}); els.copyOutput.addEventListener("click",async()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);try{await copyText(result.output);showToast(`SVG · ${els.variantLabel.value||"versão"} copiado`);}catch{showToast("Não foi possível copiar");}}); els.downloadOutput.addEventListener("click",()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);downloadSvg({name:els.name.value.trim()||"simbolo"},{label:els.variantLabel.value.trim()||"versao",finalSvg:result.output});});
+els.paste.addEventListener("click",pasteSvg); els.format.addEventListener("click",()=>{const parsed=parseSvg(els.svg.value);if(!parsed.ok)return showToast(parsed.error);els.svg.value=serializeSvg(parsed.root);updateEditor();updateLiveDuplicateWarning();}); els.copyOutput.addEventListener("click",async()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);try{await copyText(result.output);showToast(`SVG · ${els.variantLabel.value||"versão"} copiado`);}catch{showToast("Não foi possível copiar");}}); els.downloadOutput.addEventListener("click",()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);downloadSvg({name:els.name.value.trim()||"simbolo"},{label:els.variantLabel.value.trim()||"versao",finalSvg:result.output});});
 els.search.addEventListener("input",render); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;if(els.libraryMenu.hidden)libraryIconPreview.hidden=true;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target)){els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;}}); els.exportButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,EXPORT_ICON,"Exportar biblioteca"))return;exportLibrary();}); els.importButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,IMPORT_ICON,"Importar biblioteca"))return;els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
 
 render(); if("serviceWorker" in navigator && window.APP_CONFIG?.enableServiceWorker)navigator.serviceWorker.register("./sw.js").catch(()=>{});
