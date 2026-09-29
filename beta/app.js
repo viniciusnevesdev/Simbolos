@@ -371,7 +371,7 @@ function toggleSelection(id){
 }
 function sourceNameForInsert(){return items.find(item=>item.id===swapSourceId)?.name||"ícone";}
 function swapItems(id){
-  if(!swapSourceId){swapSourceId=id;render();showToast("Agora toque em Trocar lugar no outro ícone");return;}
+  if(!swapSourceId){swapSourceId=id;render();showToast("Toque em outro ícone para trocar ou em uma linha azul para inserir");return;}
   if(swapSourceId===id){swapSourceId=null;render();return;}
   const source=items.find(item=>item.id===swapSourceId),target=items.find(item=>item.id===id);
   if(!source||!target){swapSourceId=null;render();return;}
@@ -382,18 +382,31 @@ function swapItems(id){
   if(!persist(items)){showToast("Não foi possível trocar as posições");render();return;}
   render();showToast("Posições trocadas");
 }
-function moveItemToPosition(beforeId,family){
+function moveItemToPosition(anchorId,family,position="after"){
   if(!swapSourceId)return;
-  const source=items.find(item=>item.id===swapSourceId),target=beforeId?items.find(item=>item.id===beforeId):null;
-  if(!source||(beforeId&&!target)){swapSourceId=null;render();return;}
-  if(familyKey(source)!==family||target&&familyKey(target)!==family){showToast("Escolha uma posição no mesmo grupo");return;}
+  const source=items.find(item=>item.id===swapSourceId),anchor=anchorId?items.find(item=>item.id===anchorId):null;
+  if(!source||(anchorId&&!anchor)){swapSourceId=null;render();return;}
+  if(familyKey(source)!==family||anchor&&familyKey(anchor)!==family){showToast("Escolha uma posição no mesmo grupo");return;}
+
+  const originalItems=items.slice();
   const sourceIndex=items.findIndex(item=>item.id===source.id);
   items.splice(sourceIndex,1);
-  const insertIndex=target?items.findIndex(item=>item.id===target.id):items.reduce((last,item,index)=>familyKey(item)===family?index+1:last,0);
+
+  let insertIndex;
+  if(anchor){
+    const anchorIndex=items.findIndex(item=>item.id===anchor.id);
+    insertIndex=anchorIndex+(position==="after"?1:0);
+  }else if(position==="start"){
+    const firstIndex=items.findIndex(item=>familyKey(item)===family);
+    insertIndex=firstIndex<0?items.length:firstIndex;
+  }else{
+    insertIndex=items.reduce((last,item,index)=>familyKey(item)===family?index+1:last,0);
+  }
+
   items.splice(Math.max(0,insertIndex),0,source);
   swapSourceId=null;
-  if(!persist(items)){showToast("Não foi possível mover o ícone");render();return;}
-  render();showToast("Ícone movido");
+  if(!persist(items)){items=originalItems;showToast("Não foi possível mover o ícone");render();return;}
+  render();showToast("Ícone inserido na nova posição");
 }
 function setOrganizeMode(enabled){
   organizeMode=!!enabled;
@@ -444,8 +457,12 @@ function render(){
         tools.append(swap);card.append(tools);
         if(swapSourceId&&swapSourceId!==item.id&&familyKey(item)===familyKey(items.find(candidate=>candidate.id===swapSourceId))){
           const insert=document.createElement("button");
-          insert.type="button";insert.className="organize-insert";insert.setAttribute("aria-label",`Inserir ${sourceNameForInsert()} antes de ${item.name}`);insert.title="Inserir nesta posição";
-          insert.addEventListener("click",e=>{e.stopPropagation();moveItemToPosition(item.id,key);});card.append(insert);
+          insert.type="button";
+          insert.className="organize-insert";
+          insert.setAttribute("aria-label",`Inserir ${sourceNameForInsert()} depois de ${item.name}`);
+          insert.title="Inserir depois deste ícone";
+          insert.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();moveItemToPosition(item.id,key,"after");});
+          card.append(insert);
         }
         main.addEventListener("click",e=>{e.preventDefault();toggleSelection(item.id);});
         copy.hidden=true;download.hidden=true;
@@ -455,11 +472,6 @@ function render(){
       }
       inner.appendChild(node);
     });
-    if(organizeMode&&swapSourceId&&members.some(item=>item.id===swapSourceId)){
-      const endInsert=document.createElement("button");
-      endInsert.type="button";endInsert.className="organize-insert organize-insert-end";endInsert.setAttribute("aria-label",`Inserir ${sourceNameForInsert()} ao final de ${family}`);endInsert.title="Inserir no final do grupo";
-      endInsert.addEventListener("click",()=>moveItemToPosition(null,key));inner.append(endInsert);
-    }
     section.append(headingRow,inner);els.grid.appendChild(section);
   });
   const familiesForInputs=[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
