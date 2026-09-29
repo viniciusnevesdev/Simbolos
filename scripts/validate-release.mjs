@@ -3,9 +3,9 @@ import fs from 'node:fs';
 const required=[
   'index.html','app.js','boot.js','runtime-guard.js','core-safety-patch.js',
   'menu.html','menu/index.html','diagnostico/index.html','launch.html','recover.html','safe.html',
-  'manifest.webmanifest','icons/apple-touch-icon.png','icons/icon-192.png','icons/icon-512.png',
+  'manifest.webmanifest',
   'beta/index.html','beta/app.js','beta/boot.js','beta/config.js','beta/recover.html','beta/safe.html','beta/manage.html',
-  'beta/manifest.webmanifest','beta/icons/apple-touch-icon.png','beta/icons/icon-192.png','beta/icons/icon-512.png'
+  'beta/manifest.webmanifest'
 ];
 
 const fail=m=>{console.error('VALIDATION ERROR:',m);process.exitCode=1;};
@@ -35,13 +35,25 @@ if(importsApp(menu)) fail('menu.html não pode importar app.js');
 const menuIndex=read('menu/index.html');
 if(!menuIndex.includes('../menu.html')) fail('/menu/index.html deve apontar para ../menu.html');
 
+const linkedHref=(html,rel)=>{
+  const links=[...html.matchAll(/<link\b[^>]*>/gi)].map(m=>m[0]);
+  const tag=links.find(x=>new RegExp(`\\brel\\s*=\\s*["'][^"']*\\b${rel}\\b[^"']*["']`,'i').test(x));
+  return tag?.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1]||null;
+};
+const localAsset=(href,base='')=>{
+  if(!href||/^(?:https?:)?\/\//i.test(href))return null;
+  return base+href.split(/[?#]/)[0].replace(/^\.\//,'');
+};
+
 const index=read('index.html');
-if(!/\.\/icons\/apple-touch-icon[^"']*\.png/.test(index)) fail('Oficial sem apple-touch-icon PNG');
+const officialAppleTouch=localAsset(linkedHref(index,'apple-touch-icon'));
+if(!officialAppleTouch||!officialAppleTouch.endsWith('.png')||!fs.existsSync(officialAppleTouch)) fail('Oficial sem apple-touch-icon PNG válido');
 if(!index.includes('./boot.js')) fail('Oficial sem boot resiliente');
 if(importsApp(index)) fail('app.js não deve ser carregado diretamente pelo HTML');
 
 const betaIndex=read('beta/index.html');
-if(!betaIndex.includes('./icons/apple-touch-icon.png')) fail('Beta sem apple-touch-icon PNG próprio');
+const betaAppleTouch=localAsset(linkedHref(betaIndex,'apple-touch-icon'),'beta/');
+if(!betaAppleTouch||!betaAppleTouch.endsWith('.png')||!fs.existsSync(betaAppleTouch)) fail('Beta sem apple-touch-icon PNG próprio');
 if(!betaIndex.includes('./boot.js')) fail('Beta sem boot resiliente');
 if(importsApp(betaIndex)) fail('beta/app.js não deve ser carregado diretamente pelo HTML');
 if(!betaIndex.includes('href="../diagnostico/"')||!betaIndex.includes('href="../menu.html"')) fail('Beta contém links de fallback fora do escopo correto');
@@ -51,21 +63,24 @@ if(!betaCfg.includes('simbolos.beta.library.v2')) fail('Beta não usa storage pr
 if(betaCfg.includes('storageKey:"simbolos.library.v2"')) fail('Beta reutiliza storage oficial');
 if(!betaCfg.includes('"simbolos.library.v2":"simbolos.beta.library.v2"')) fail('Beta não intercepta a chave hardcoded do motor legado');
 
-for(const f of ['manifest.webmanifest','beta/manifest.webmanifest']){
+for(const [f,base] of [['manifest.webmanifest',''],['beta/manifest.webmanifest','beta/']]){
   const m=JSON.parse(read(f));
   if(m.start_url!=='./') fail(`${f}: start_url precisa ser ./`);
   if(m.scope!=='./') fail(`${f}: scope precisa ser ./`);
-  if(!m.icons?.some(x=>x.sizes==='192x192')||!m.icons?.some(x=>x.sizes==='512x512')) fail(`${f}: ícones 192/512 ausentes`);
+  for(const [size,w,h] of [['192x192',192,192],['512x512',512,512]]){
+    const icon=m.icons?.find(x=>x.sizes===size);
+    const file=localAsset(icon?.src,base);
+    if(!file||!fs.existsSync(file)) { fail(`${f}: ícone ${size} ausente`); continue; }
+    const dimensions=pngSize(file);
+    if(!dimensions||dimensions[0]!==w||dimensions[1]!==h) fail(`${file}: PNG inválido ou dimensão incorreta`);
+  }
 }
-
-for(const [file,w,h] of [
-  ['icons/apple-touch-icon.png',180,180],['icons/icon-192.png',192,192],['icons/icon-512.png',512,512],
-  ['beta/icons/apple-touch-icon.png',180,180],['beta/icons/icon-192.png',192,192],['beta/icons/icon-512.png',512,512]
-]){
+for(const [file,label] of [[officialAppleTouch,'Oficial'],[betaAppleTouch,'Beta']]){
+  if(!file||!fs.existsSync(file))continue;
   const size=pngSize(file);
-  if(!size||size[0]!==w||size[1]!==h) fail(`${file}: PNG inválido ou dimensão incorreta`);
+  if(!size||size[0]!==180||size[1]!==180) fail(`${label}: apple-touch-icon precisa ter 180x180`);
 }
-if(fs.readFileSync('icons/apple-touch-icon.png').equals(fs.readFileSync('beta/icons/apple-touch-icon.png'))) fail('ícone Beta precisa ser visualmente distinto do Oficial');
+if(officialAppleTouch&&betaAppleTouch&&fs.existsSync(officialAppleTouch)&&fs.existsSync(betaAppleTouch)&&fs.readFileSync(officialAppleTouch).equals(fs.readFileSync(betaAppleTouch))) fail('ícone Beta precisa ser visualmente distinto do Oficial');
 
 for(const f of ['recover.html','beta/recover.html']){
   const t=read(f);
