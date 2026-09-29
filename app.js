@@ -34,6 +34,13 @@ const familySlot=document.getElementById("familyFieldSlot");
 if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);}
 els.family=familyInput;els.familyList=familyList;
 
+const tagsLabel=document.createElement("label"),tagsInput=document.createElement("input"),tagsHelp=document.createElement("small");
+tagsLabel.className="field-label field-spaced";tagsLabel.htmlFor="tagsInput";tagsLabel.textContent="Palavras-chave / tags";
+tagsInput.id="tagsInput";tagsInput.className="text-input keywords-input";tagsInput.type="text";tagsInput.maxLength=800;tagsInput.placeholder="Ex.: casa, início, home, lar";tagsInput.autocomplete="off";
+tagsHelp.className="keywords-help";tagsHelp.textContent="Separe por vírgulas. A busca considera título, grupo, versões e estas palavras-chave.";
+if(familySlot){familySlot.append(tagsLabel,tagsInput,tagsHelp);}else{familyInput.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
+els.tags=tagsInput;
+
 let items = loadItems();
 let groupIcons = loadGroupIcons();
 let draft = null;
@@ -155,6 +162,18 @@ function uid(){ return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-
 function defaultOptions(){ return { colorMode:"currentColor", sizeMode:"24", fixedColor:"#000000", cleanup:true, strokeOverride:null }; }
 function normalizeOptions(value){ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{},stroke=Number(source.strokeOverride);return {colorMode:["currentColor","original","fixed"].includes(source.colorMode)?source.colorMode:"currentColor",sizeMode:["24","1em","original"].includes(source.sizeMode)?source.sizeMode:"24",fixedColor:typeof source.fixedColor==="string"&&/^#[0-9a-f]{6}$/i.test(source.fixedColor)?source.fixedColor:"#000000",cleanup:source.cleanup!==false,strokeOverride:source.strokeOverride!=null&&Number.isFinite(stroke)?Math.min(4,Math.max(.5,stroke)):null}; }
 function newVariant(label="Padrão"){ return { id:uid(), label, originalSvg:"", finalSvg:"", options:defaultOptions(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() }; }
+function normalizeSearchText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR");}
+function normalizeTags(value){
+  const source=Array.isArray(value)?value:(typeof value==="string"?value.split(/[,;\n]+/):[]);
+  const seen=new Set(),out=[];
+  source.forEach(entry=>{const tag=String(entry??"").trim().replace(/\s+/g," ").slice(0,40),key=normalizeSearchText(tag);if(!tag||!key||seen.has(key))return;seen.add(key);out.push(tag);});
+  return out.slice(0,30);
+}
+function matchesQuery(item,query){
+  const terms=normalizeSearchText(query).split(/\s+/).filter(Boolean);if(!terms.length)return true;
+  const haystack=normalizeSearchText([item?.name,item?.family,...normalizeTags(item?.tags),...(item?.variants||[]).map(v=>v?.label)].filter(Boolean).join(" "));
+  return terms.every(term=>haystack.includes(term));
+}
 function normalizeItem(item){
   if(!item||typeof item!=="object"||Array.isArray(item))return null;
   if (Array.isArray(item.variants) && item.variants.length) {
@@ -163,6 +182,7 @@ function normalizeItem(item){
     item.id=typeof item.id==="string"&&item.id?item.id:uid();
     item.name=typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título";
     item.family=typeof item.family==="string"?item.family.trim().slice(0,40):"";
+    item.tags=normalizeTags(item.tags);
     item.createdAt=typeof item.createdAt==="string"?item.createdAt:new Date().toISOString();
     item.updatedAt=typeof item.updatedAt==="string"?item.updatedAt:new Date().toISOString();
     item.defaultVariantId = item.variants.some(v=>v.id===item.defaultVariantId) ? item.defaultVariantId : item.variants[0].id;
@@ -170,7 +190,7 @@ function normalizeItem(item){
   }
   if (typeof item.originalSvg === "string") {
     const v = { id:uid(), label:"Padrão", originalSvg:item.originalSvg, finalSvg:typeof item.finalSvg==="string"?item.finalSvg:item.originalSvg, options:normalizeOptions(item.options), createdAt:typeof item.createdAt==="string"?item.createdAt:new Date().toISOString(), updatedAt:typeof item.updatedAt==="string"?item.updatedAt:new Date().toISOString() };
-    return { id:typeof item.id==="string"&&item.id?item.id:uid(), name:typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título", family:typeof item.family==="string"?item.family.trim().slice(0,40):"", variants:[v], defaultVariantId:v.id, createdAt:v.createdAt, updatedAt:v.updatedAt };
+    return { id:typeof item.id==="string"&&item.id?item.id:uid(), name:typeof item.name==="string"&&item.name.trim()?item.name.trim().slice(0,80):"Sem título", family:typeof item.family==="string"?item.family.trim().slice(0,40):"", tags:normalizeTags(item.tags), variants:[v], defaultVariantId:v.id, createdAt:v.createdAt, updatedAt:v.updatedAt };
   }
   return null;
 }
@@ -276,8 +296,8 @@ function groupIconMarkup(item){
 function groupIconFor(family){return items.find(item=>item.id===groupIcons[groupIconKey(family)])||null;}
 function renderGroupIconPicker(){
   if(!editingGroupIconKey)return;
-  const q=groupIconSearch.value.trim().toLocaleLowerCase("pt-BR"),selectedId=groupIcons[editingGroupIconKey]||"";
-  const matches=items.filter(item=>!q||item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q));
+  const q=groupIconSearch.value.trim(),selectedId=groupIcons[editingGroupIconKey]||"";
+  const matches=items.filter(item=>matchesQuery(item,q));
   groupIconPickerList.innerHTML="";
   matches.forEach(item=>{
     const button=document.createElement("button"),preview=document.createElement("span"),copy=document.createElement("span"),name=document.createElement("strong"),meta=document.createElement("small");
@@ -378,7 +398,7 @@ function applyFamilyToSelection(value){
   showToast(family?`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para “${family}”`:`${total} ícone${total===1?"":"s"} movido${total===1?"":"s"} para Outros`);
 }
 function render(){
-  const q=els.search.value.trim().toLocaleLowerCase("pt-BR"),filtered=items.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(q)||(item.family||"").toLocaleLowerCase("pt-BR").includes(q)||item.variants.some(v=>v.label.toLocaleLowerCase("pt-BR").includes(q))); els.grid.innerHTML="";
+  const q=els.search.value.trim(),filtered=items.filter(item=>matchesQuery(item,q)); els.grid.innerHTML="";
   const named=[...new Set(filtered.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")),families=[...named,"Outros"];
   families.forEach(family=>{
     const members=filtered.filter(item=>family==="Outros"?!item.family:item.family===family);if(!members.length)return;
@@ -442,13 +462,13 @@ function deleteSymbolById(id){
 }
 function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els.copyList.innerHTML=""; item.variants.forEach(v=>{ const b=document.createElement("button"),details=document.createElement("span"),strong=document.createElement("strong"),small=document.createElement("small"),action=document.createElement("span"); b.type="button";strong.textContent=v.label;small.textContent=`${v.id===item.defaultVariantId?"Padrão · ":""}${v.options?.colorMode==="currentColor"?"currentColor":"SVG"}`;action.textContent=mode==="download"?"Salvar SVG":"Copiar";details.append(strong,small);b.append(details,action);b.addEventListener("click",async()=>{if(mode==="download")downloadSvg(item,v);else await copyVariant(item,v);els.copyDialog.close();});els.copyList.appendChild(b); }); els.copyDialog.showModal(); }
 function openEditor(id=null){
-  if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.deleteSymbol.hidden=false; }
-  else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.deleteSymbol.hidden=true; }
+  if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.tags.value=normalizeTags(item.tags).join(", "); els.deleteSymbol.hidden=false; }
+  else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",tags:[],variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.tags.value=""; els.deleteSymbol.hidden=true; }
   activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); document.body.classList.add("dialog-open");
 }
 function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
 function validateDraft(){
-  const name=els.name.value.trim(); if(!name)return {ok:false,error:"Dê um título ao símbolo",focus:els.name}; stashCurrent(); draft.name=name; draft.family=els.family.value.trim().slice(0,40);
+  const name=els.name.value.trim(); if(!name)return {ok:false,error:"Dê um título ao símbolo",focus:els.name}; stashCurrent(); draft.name=name; draft.family=els.family.value.trim().slice(0,40); draft.tags=normalizeTags(els.tags.value);
   for(const v of draft.variants){ if(!v.label.trim())return {ok:false,error:"Dê um nome para cada versão"}; const result=transformSvg(v.originalSvg,v.options); if(!result.ok)return {ok:false,error:`${v.label}: ${result.error}`}; v.finalSvg=result.output; }
   return {ok:true};
 }
@@ -509,7 +529,7 @@ function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=new
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
 function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
 async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
-function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:3,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
+function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:4,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
 function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()],validIds=new Set(nextItems.map(x=>x.id)),incomingGroupIcons=normalizeGroupIcons(data?.groupIcons),nextGroupIcons={...groupIcons,...Object.fromEntries(Object.entries(incomingGroupIcons).filter(([,id])=>validIds.has(id)))};if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;groupIcons=nextGroupIcons;persistGroupIcons();render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
 
 duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
