@@ -451,5 +451,5 @@ body.organize-mode .search-field{opacity:.6}
 @media(min-width:520px){.group-icon-picker-list{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 /* Palavras-chave dos símbolos */
-.keywords-input{margin-top:0}
+.keywords-input{margin-top:0;height:auto!important;min-height:46px;overflow:hidden;resize:none;white-space:pre-wrap;line-height:1.4;padding:11px 12px}
 .keywords-help{display:block;margin-top:7px;color:var(--muted);font-size:11px;line-height:1.35}
