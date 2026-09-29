@@ -1,11 +1,11 @@
 (()=>{
-  const STORAGE_KEY="simbolos.ui.gridColumns.v1";
+  const STORAGE_KEY="simbolos.ui.gridColumns.v2";
   const VALID_COLUMNS=[2,3,4,5,6];
   const grid=document.getElementById("symbolGrid");
   const menu=document.getElementById("libraryMenu");
   if(!grid||!menu)return;
 
-  const defaultColumns=()=>window.matchMedia("(min-width:900px)").matches?4:window.matchMedia("(min-width:640px)").matches?3:2;
+  const defaultColumns=()=>5;
   const loadColumns=()=>{
     try{
       const value=Number(localStorage.getItem(STORAGE_KEY));
@@ -17,7 +17,7 @@
   style.id="grid-layout-styles";
   style.textContent=`
 #symbolGrid.symbol-grid{
-  --grid-columns:2;
+  --grid-columns:5;
   --grid-gap:12px;
   display:block!important;
 }
@@ -117,7 +117,7 @@
 
   let columns=loadColumns();
   const applyColumns=(value,{save=true,announce=false}={})=>{
-    const next=VALID_COLUMNS.includes(Number(value))?Number(value):2;
+    const next=VALID_COLUMNS.includes(Number(value))?Number(value):5;
     columns=next;
     grid.dataset.columns=String(next);
     grid.style.setProperty("--grid-columns",String(next));
