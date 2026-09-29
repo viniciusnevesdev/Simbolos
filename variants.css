@@ -136,6 +136,8 @@ body.organize-mode .search-field{opacity:.6}
 .symbol-actions-head small{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .symbol-actions-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px}
 .symbol-actions-head>button{width:38px;height:38px;border:0;border-radius:50%;background:var(--soft);font-size:22px}
+.symbol-actions-preview{height:150px;display:grid;place-items:center;margin:0 0 13px;border-radius:18px;background:var(--soft);color:var(--text);overflow:hidden}
+.symbol-actions-preview svg{display:block;width:100px!important;height:100px!important;max-width:72%!important;max-height:72%!important;color:inherit}
 .symbol-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .symbol-actions-grid>button{
   min-height:78px;
