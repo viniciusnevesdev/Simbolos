@@ -97,6 +97,7 @@ symbolActionsDialog.innerHTML=`
       <div><small>Símbolo</small><strong id="symbolActionsTitle">—</strong></div>
       <button id="symbolActionsClose" type="button" aria-label="Fechar">×</button>
     </div>
+    <div id="symbolActionsPreview" class="symbol-actions-preview" aria-hidden="true"></div>
     <div class="symbol-actions-grid">
       <button id="symbolActionsCopy" type="button"><span aria-hidden="true">⧉</span><strong>Copiar código</strong></button>
       <button id="symbolActionsDownload" type="button"><span aria-hidden="true">↓</span><strong>Baixar .SVG</strong></button>
@@ -107,6 +108,7 @@ symbolActionsDialog.innerHTML=`
 `;
 document.body.appendChild(symbolActionsDialog);
 const symbolActionsTitle=document.getElementById("symbolActionsTitle");
+const symbolActionsPreview=document.getElementById("symbolActionsPreview");
 const symbolActionsClose=document.getElementById("symbolActionsClose");
 const symbolActionsCopy=document.getElementById("symbolActionsCopy");
 const symbolActionsDownload=document.getElementById("symbolActionsDownload");
@@ -450,7 +452,11 @@ function downloadSvg(item,variant){ const code=variant.finalSvg||variant.origina
 async function copyVariant(item,variant){ try{await copyText(variant.finalSvg||variant.originalSvg);showToast(`“${item.name} · ${variant.label}” copiado`);}catch{showToast("Não foi possível copiar");} }
 function openSymbolActions(id){
   const item=items.find(x=>x.id===id);if(!item)return;
-  symbolActionsItemId=id;symbolActionsTitle.textContent=item.name;symbolActionsDialog.showModal();
+  const def=defaultVariant(item);
+  symbolActionsItemId=id;
+  symbolActionsTitle.textContent=item.name;
+  symbolActionsPreview.innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||"");
+  symbolActionsDialog.showModal();
 }
 function closeSymbolActions(){ if(symbolActionsDialog.open)symbolActionsDialog.close();symbolActionsItemId=null; }
 function deleteSymbolById(id){
