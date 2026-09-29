@@ -34,15 +34,21 @@ const familySlot=document.getElementById("familyFieldSlot");
 if(familySlot){familySlot.append(familyLabel,familyInput,familyList);}else{els.name.insertAdjacentElement("afterend",familyList);els.name.insertAdjacentElement("afterend",familyInput);els.name.insertAdjacentElement("afterend",familyLabel);}
 els.family=familyInput;els.familyList=familyList;
 
-const tagsLabel=document.createElement("label"),tagsInput=document.createElement("input"),tagsHelp=document.createElement("small");
+const tagsLabel=document.createElement("label"),tagsInput=document.createElement("textarea"),tagsHelp=document.createElement("small");
 tagsLabel.className="field-label field-spaced";tagsLabel.htmlFor="tagsInput";tagsLabel.textContent="Palavras-chave / tags";
-tagsInput.id="tagsInput";tagsInput.className="text-input keywords-input";tagsInput.type="text";tagsInput.maxLength=800;tagsInput.placeholder="Ex.: casa, início, home, lar";tagsInput.autocomplete="off";
+tagsInput.id="tagsInput";tagsInput.className="text-input keywords-input";tagsInput.rows=1;tagsInput.maxLength=800;tagsInput.placeholder="Ex.: casa, início, home, lar";tagsInput.autocomplete="off";tagsInput.wrap="soft";
 tagsHelp.className="keywords-help";tagsHelp.textContent="Separe por vírgulas. A busca considera título, grupo, versões e estas palavras-chave.";
 const quickEntryCard=els.name.closest(".quick-entry-card");
 if(quickEntryCard){els.name.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
 else if(familySlot){familySlot.insertAdjacentElement("beforebegin",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
 else{familyInput.insertAdjacentElement("afterend",tagsLabel);tagsLabel.insertAdjacentElement("afterend",tagsInput);tagsInput.insertAdjacentElement("afterend",tagsHelp);}
 els.tags=tagsInput;
+function resizeTagsInput(){
+  els.tags.style.height="auto";
+  els.tags.style.height=`${Math.max(46,els.tags.scrollHeight)}px`;
+}
+els.tags.addEventListener("input",resizeTagsInput);
+window.addEventListener("resize",resizeTagsInput);
 
 let items = loadItems();
 let groupIcons = loadGroupIcons();
@@ -473,7 +479,7 @@ function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els
 function openEditor(id=null){
   if(id){ const item=items.find(x=>x.id===id); if(!item)return; draft=clone(item); els.editorTitle.textContent=item.name; els.name.value=item.name; els.family.value=item.family||""; els.tags.value=normalizeTags(item.tags).join(", "); els.deleteSymbol.hidden=false; }
   else{ const v=newVariant("Padrão"); draft={id:uid(),name:"",family:"",tags:[],variants:[v],defaultVariantId:v.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; els.editorTitle.textContent="Novo símbolo"; els.name.value=""; els.family.value=""; els.tags.value=""; els.deleteSymbol.hidden=true; }
-  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); els.editor.showModal(); document.body.classList.add("dialog-open");
+  activeVariantId=draft.defaultVariantId||draft.variants[0].id; els.previewColor.value="#000000"; loadVariantToUI(activeVariantId); resizeTagsInput(); els.editor.showModal(); requestAnimationFrame(resizeTagsInput); document.body.classList.add("dialog-open");
 }
 function closeEditor(){ els.editor.close(); document.body.classList.remove("dialog-open"); draft=null; activeVariantId=null; }
 function validateDraft(){
