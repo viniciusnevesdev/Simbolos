@@ -400,19 +400,20 @@ function toggleSelection(id){
   if(card)card.classList.toggle("selected",selectedItems.has(id));
 }
 function sourceNameForInsert(){return items.find(item=>item.id===swapSourceId)?.name||"ícone";}
-function swapItems(id){
+async function swapItems(id){
   if(!swapSourceId){swapSourceId=id;render();showToast("Toque em outro ícone para trocar ou em uma linha azul para inserir");return;}
   if(swapSourceId===id){swapSourceId=null;render();return;}
   const source=items.find(item=>item.id===swapSourceId),target=items.find(item=>item.id===id);
   if(!source||!target){swapSourceId=null;render();return;}
   if(familyKey(source)!==familyKey(target)){showToast("Escolha outro ícone do mesmo grupo");return;}
   const sourceIndex=items.findIndex(item=>item.id===source.id),targetIndex=items.findIndex(item=>item.id===target.id);
+  const originalSwap=items.slice();
   [items[sourceIndex],items[targetIndex]]=[items[targetIndex],items[sourceIndex]];
   swapSourceId=null;
-  if(!persist(items)){showToast("Não foi possível trocar as posições");render();return;}
+  if(!await persist(items)){items=originalSwap;showToast("Não foi possível trocar as posições");render();return;}
   render();showToast("Posições trocadas");
 }
-function moveItemToPosition(anchorId,family,position="after"){
+async function moveItemToPosition(anchorId,family,position="after"){
   if(!swapSourceId)return;
   const source=items.find(item=>item.id===swapSourceId),anchor=anchorId?items.find(item=>item.id===anchorId):null;
   if(!source||(anchorId&&!anchor)){swapSourceId=null;render();return;}
@@ -435,7 +436,7 @@ function moveItemToPosition(anchorId,family,position="after"){
 
   items.splice(Math.max(0,insertIndex),0,source);
   swapSourceId=null;
-  if(!persist(items)){items=originalItems;showToast("Não foi possível mover o ícone");render();return;}
+  if(!await persist(items)){items=originalItems;showToast("Não foi possível mover o ícone");render();return;}
   render();showToast("Ícone inserido na nova posição");
 }
 function setOrganizeMode(enabled){
@@ -450,11 +451,12 @@ function setOrganizeMode(enabled){
   updateOrganizerBar();
   render();
 }
-function applyFamilyToSelection(value){
+async function applyFamilyToSelection(value){
   if(!selectedItems.size){showToast("Selecione pelo menos um ícone");return;}
   const family=String(value||"").trim().slice(0,40);
+  const originalGroups=items;
   items=items.map(item=>selectedItems.has(item.id)?{...item,family,updatedAt:new Date().toISOString()}:item);
-  if(!persist(items)){showToast("Não foi possível atualizar o grupo");return;}
+  if(!await persist(items)){items=originalGroups;showToast("Não foi possível atualizar o grupo");return;}
   const total=selectedItems.size;
   selectedItems.clear();
   organizerFamilyInput.value="";
@@ -522,11 +524,11 @@ function openSymbolActions(id){
   symbolActionsDialog.showModal();
 }
 function closeSymbolActions(){ if(symbolActionsDialog.open)symbolActionsDialog.close();symbolActionsItemId=null; }
-function deleteSymbolById(id){
+async function deleteSymbolById(id){
   const item=items.find(x=>x.id===id);if(!item)return;
   if(!confirm(`Excluir “${item.name}” e todas as versões?`))return;
   const nextItems=items.filter(x=>x.id!==id);
-  if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}
+  if(!await persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}
   items=nextItems;render();closeSymbolActions();showToast("Símbolo excluído");
 }
 function openVariantChooser(item,mode){ els.copyTitle.textContent=item.name; els.copyList.innerHTML=""; item.variants.forEach(v=>{ const b=document.createElement("button"),details=document.createElement("span"),strong=document.createElement("strong"),small=document.createElement("small"),action=document.createElement("span"); b.type="button";strong.textContent=v.label;small.textContent=`${v.id===item.defaultVariantId?"Padrão · ":""}${v.options?.colorMode==="currentColor"?"currentColor":"SVG"}`;action.textContent=mode==="download"?"Salvar SVG":"Copiar";details.append(strong,small);b.append(details,action);b.addEventListener("click",async()=>{if(mode==="download")downloadSvg(item,v);else await copyVariant(item,v);els.copyDialog.close();});els.copyList.appendChild(b); }); els.copyDialog.showModal(); }
@@ -599,10 +601,10 @@ function findDraftDuplicates(){
   });
   return {titles:[...new Set(titles)],svgs:[...new Set(svgs)]};
 }
-function commitDraft(){
+async function commitDraft(){
   draft.updatedAt=new Date().toISOString();
   const exists=items.some(x=>x.id===draft.id),nextItems=exists?items.map(x=>x.id===draft.id?draft:x):[draft,...items];
-  if(!persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;}
+  if(!await persist(nextItems)){showToast("Não foi possível salvar. Exporte um backup e libere espaço.");return;}
   items=nextItems;render();const msg=exists?"Símbolo atualizado":"Símbolo adicionado";closeEditor();showToast(msg);
 }
 function showDuplicateWarning(duplicates){
@@ -624,10 +626,42 @@ function saveDraft(){
 }
 function addVariant(){ stashCurrent(); const count=draft.variants.length+1,v=newVariant(`Versão ${count}`); draft.variants.push(v); loadVariantToUI(v.id); setTimeout(()=>{els.variantLabel.focus();els.variantLabel.select();},50); }
 function deleteActiveVariant(){ if(!draft||draft.variants.length<=1)return; const v=currentVariant(); if(!confirm(`Excluir a versão “${v.label}”?`))return; draft.variants=draft.variants.filter(x=>x.id!==v.id); if(draft.defaultVariantId===v.id)draft.defaultVariantId=draft.variants[0].id; loadVariantToUI(draft.variants[0].id); }
-function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
+async function deleteWholeSymbol(){ if(!draft||!items.some(x=>x.id===draft.id))return; if(!confirm(`Excluir “${draft.name}” e todas as versões?`))return; const nextItems=items.filter(x=>x.id!==draft.id);if(!await persist(nextItems)){showToast("Não foi possível atualizar a biblioteca");return;}items=nextItems;render();closeEditor();showToast("Símbolo excluído"); }
 async function pasteSvg(){ try{ if(!navigator.clipboard?.readText)throw new Error(); els.svg.value=await navigator.clipboard.readText();updateEditor();updateLiveDuplicateWarning(); }catch{showToast("Cole o SVG manualmente neste campo");els.svg.focus();} }
 function exportLibrary(){ const data=JSON.stringify({app:"Simbolos",version:4,exportedAt:new Date().toISOString(),symbols:items,groupIcons},null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`simbolos-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);els.libraryMenu.hidden=true; }
-function importLibrary(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data.symbols;if(!Array.isArray(incoming))throw new Error(); const normalized=incoming.map(normalizeItem).filter(Boolean);if(incoming.length&&!normalized.length)throw new Error();const byId=new Map(items.map(x=>[x.id,x]));normalized.forEach(x=>byId.set(x.id,x));const nextItems=[...byId.values()],validIds=new Set(nextItems.map(x=>x.id)),incomingGroupIcons=normalizeGroupIcons(data?.groupIcons),nextGroupIcons={...groupIcons,...Object.fromEntries(Object.entries(incomingGroupIcons).filter(([,id])=>validIds.has(id)))};if(!persist(nextItems)){showToast("Sem espaço para importar. Exporte um backup e libere espaço.");return;}items=nextItems;groupIcons=nextGroupIcons;persistGroupIcons();render();showToast(`${normalized.length} símbolo${normalized.length===1?"":"s"} importado${normalized.length===1?"":"s"}`);}catch{showToast("Backup inválido");}finally{els.importFile.value="";}};reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};reader.readAsText(file); }
+function importLibrary(file){
+  if(!storageReady){showToast("Biblioteca de teste ainda não está pronta");return;}
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    let normalized,nextItems,nextGroups;
+    try{
+      const data=JSON.parse(String(reader.result)),incoming=Array.isArray(data)?data:data?.symbols;
+      if(!Array.isArray(incoming))throw Error("Formato inválido");
+      normalized=incoming.map(normalizeItem).filter(Boolean);
+      if(incoming.length&&!normalized.length)throw Error("Símbolos inválidos");
+      const byId=new Map(items.map(x=>[x.id,x]));
+      normalized.forEach(item=>byId.set(item.id,item));
+      nextItems=[...byId.values()];
+      const validIds=new Set(nextItems.map(item=>item.id));
+      const importedGroups=normalizeGroupIcons(data?.groupIcons);
+      nextGroups={...groupIcons,...Object.fromEntries(Object.entries(importedGroups).filter(([,id])=>validIds.has(id)))};
+    }catch(error){
+      console.error("Backup inválido",error);
+      showToast("Backup inválido");els.importFile.value="";return;
+    }
+    try{
+      showToast("Salvando no IndexedDB…");
+      await PREVIEW_STORAGE.writeBoth(nextItems,nextGroups);
+      items=nextItems;groupIcons=nextGroups;visibleByGroup.clear();render();
+      showToast(`${normalized.length} símbolos importados na biblioteca TESTE`);
+    }catch(error){
+      console.error("Falha ao importar",error);
+      showToast("Erro de armazenamento. Biblioteca de teste anterior preservada.");
+    }finally{els.importFile.value="";}
+  };
+  reader.onerror=()=>{els.importFile.value="";showToast("Não foi possível ler o arquivo");};
+  reader.readAsText(file);
+}
 
 duplicateReviewButton.addEventListener("click",()=>duplicateWarningDialog.close());
 duplicateSaveAnywayButton.addEventListener("click",()=>{duplicateWarningDialog.close();commitDraft();});
