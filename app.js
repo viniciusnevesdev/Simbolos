@@ -63,8 +63,10 @@ if("ResizeObserver" in window){
   tagsResizeObserver.observe(els.tags);
 }
 
-let items = loadItems();
-let groupIcons = loadGroupIcons();
+let items = [];
+let groupIcons = {};
+const visibleByGroup = new Map();
+let storageReady = false;
 let draft = null;
 let activeVariantId = null;
 let toastTimer = null;
@@ -233,14 +235,24 @@ function normalizeItem(item){
   }
   return null;
 }
-function loadItems(){
-  const read=key=>{try{const value=JSON.parse(localStorage.getItem(key)||"null");return Array.isArray(value)?value:null;}catch{return null;}};
-  const current=read(STORAGE_KEY),legacy=current===null?read(LEGACY_KEY):null,raw=current??legacy??[];
-  const normalized=raw.map(normalizeItem).filter(Boolean);
-  if(current===null&&legacy!==null){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(normalized));}catch{}}
-  return normalized;
+// O preview é separado: não migra automaticamente a biblioteca Oficial.
+async function persist(nextItems=items){
+  try{await PREVIEW_STORAGE.writeItems(nextItems);return true;}
+  catch(error){console.warn("Falha ao salvar IndexedDB",error);return false;}
 }
-function persist(nextItems=items){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextItems));return true;}catch(error){console.warn("Não foi possível salvar a biblioteca:",error);return false;} }
+async function initializePreview(){
+  try{
+    const data=await PREVIEW_STORAGE.load();
+    items=(Array.isArray(data.items)?data.items:[]).map(normalizeItem).filter(Boolean);
+    groupIcons=normalizeGroupIcons(data.groupIcons);
+    storageReady=true;
+    render();
+  }catch(error){
+    console.error("Falha ao carregar biblioteca de teste",error);
+    els.count.textContent="Armazenamento de teste indisponível";
+    showToast("Não foi possível abrir o IndexedDB");
+  }
+}
 function groupIconKey(family){return family==="Outros"?"__others__":String(family||"").trim().slice(0,40);}
 function normalizeGroupIcons(value){
   if(!value||typeof value!=="object"||Array.isArray(value))return {};
@@ -249,8 +261,10 @@ function normalizeGroupIcons(value){
     return (key&&symbolId)?[[key,symbolId]]:[];
   }));
 }
-function loadGroupIcons(){try{return normalizeGroupIcons(JSON.parse(localStorage.getItem(GROUP_ICONS_KEY)||"{}"));}catch{return {};}}
-function persistGroupIcons(next=groupIcons){try{localStorage.setItem(GROUP_ICONS_KEY,JSON.stringify(next));return true;}catch{return false;}}
+async function persistGroupIcons(next=groupIcons){
+  try{await PREVIEW_STORAGE.writeGroups(next);return true;}
+  catch(error){console.warn("Falha ao salvar ícones dos grupos",error);return false;}
+}
 function showToast(message){ clearTimeout(toastTimer); els.toast.textContent=message; els.toast.hidden=false; toastTimer=setTimeout(()=>els.toast.hidden=true,1800); }
 async function copyText(text){
   if (!text) throw new Error("empty");
@@ -643,4 +657,4 @@ document.querySelectorAll('input[name="colorMode"],input[name="sizeMode"]').forE
 els.paste.addEventListener("click",pasteSvg); els.format.addEventListener("click",()=>{const parsed=parseSvg(els.svg.value);if(!parsed.ok)return showToast(parsed.error);els.svg.value=serializeSvg(parsed.root);updateEditor();updateLiveDuplicateWarning();}); els.copyOutput.addEventListener("click",async()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);try{await copyText(result.output);showToast(`SVG · ${els.variantLabel.value||"versão"} copiado`);}catch{showToast("Não foi possível copiar");}}); els.downloadOutput.addEventListener("click",()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);downloadSvg({name:els.name.value.trim()||"simbolo"},{label:els.variantLabel.value.trim()||"versao",finalSvg:result.output});});
 els.search.addEventListener("input",render); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;if(els.libraryMenu.hidden)libraryIconPreview.hidden=true;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target)){els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;}}); els.exportButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,EXPORT_ICON,"Exportar biblioteca"))return;exportLibrary();}); els.importButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,IMPORT_ICON,"Importar biblioteca"))return;els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
 
-render(); if("serviceWorker" in navigator && window.APP_CONFIG?.enableServiceWorker)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+els.count.textContent="Abrindo biblioteca de teste…"; initializePreview(); if("serviceWorker" in navigator && window.APP_CONFIG?.enableServiceWorker)navigator.serviceWorker.register("./sw.js").catch(()=>{});
