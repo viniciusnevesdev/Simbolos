@@ -17,8 +17,9 @@
     return result;
   }
   async function storageCheck(){
-    const out={localStorage:false,indexedDB:typeof indexedDB!=="undefined"};
-    try{const k="__simbolos_boot_test__";localStorage.setItem(k,"1");out.localStorage=localStorage.getItem(k)==="1";localStorage.removeItem(k);}catch(e){out.error=String(e.message||e);}return out;
+    const out={indexedDB:typeof indexedDB!=="undefined"};
+    try{await window.PREVIEW_STORAGE.load();out.ready=true;}catch(e){out.ready=false;out.error=String(e.message||e);}
+    return out;
   }
   function looksFunctional(){return !!(document.querySelector(".app-shell")&&document.getElementById("symbolGrid")&&document.getElementById("addButton")&&document.getElementById("editorDialog")&&document.getElementById("symbolCount"));}
   function fail(message){setProgress(100);if(status)status.textContent="O app não conseguiu concluir a inicialização.";if(failure){failure.hidden=false;failure.querySelector("strong").textContent=message;}setStep("stepInterface","error","Falha detectada");document.documentElement.dataset.boot="failed";}
@@ -30,7 +31,7 @@
     setStep("stepHtml","ok","HTML carregado");setProgress(14);
     const maintenance=withTimeout(cleanRuntime(),1800,"runtime").then(r=>{logs.runtime=r;if(r?.timedOut)setStep("stepWeb","warn","Limpeza em segundo plano");else setStep("stepWeb","ok",r.registrations||r.caches?"Runtime antigo removido":"Ambiente limpo");});
     setStep("stepWeb","running","Verificando runtime");
-    const storage=await storageCheck();logs.storage=storage;setStep("stepData",storage.localStorage?"ok":"warn",storage.localStorage?"Dados locais acessíveis":"Storage com restrição");setProgress(30);
+    const storage=await storageCheck();logs.storage=storage;setStep("stepData",storage.ready?"ok":"warn",storage.ready?"IndexedDB de teste acessível":"IndexedDB indisponível");setProgress(30);
     try{await loadScript(assetUrl("runtime-guard.js"),3000);}catch(e){logs.errors.push({type:"guard",message:String(e.message||e)});}
     setStep("stepEngine","running","Carregando motor");setProgress(42);
     const coreStart=performance.now();
