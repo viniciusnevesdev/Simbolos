@@ -356,7 +356,7 @@ function renderGroupIconPicker(){
     const button=document.createElement("button"),preview=document.createElement("span"),copy=document.createElement("span"),name=document.createElement("strong"),meta=document.createElement("small");
     button.type="button";button.className="group-icon-option";button.classList.toggle("selected",item.id===selectedId);button.setAttribute("role","option");button.setAttribute("aria-selected",String(item.id===selectedId));
     preview.className="group-icon-option-preview";preview.innerHTML=groupIconMarkup(item);name.textContent=item.name;meta.textContent=item.family?`Grupo: ${item.family}`:"Sem grupo";copy.append(name,meta);button.append(preview,copy);
-    button.addEventListener("click",()=>{groupIcons={...groupIcons,[editingGroupIconKey]:item.id};if(!persistGroupIcons()){showToast("Não foi possível salvar o ícone do grupo");return;}const name=editingGroupIconName;render();closeGroupIconPicker();showToast(`Ícone definido para “${name}”`);});
+    button.addEventListener("click",async ()=>{const next={...groupIcons,[editingGroupIconKey]:item.id};if(!await persistGroupIcons(next)){showToast("Não foi possível salvar o ícone do grupo");return;}groupIcons=next;const name=editingGroupIconName;render();closeGroupIconPicker();showToast(`Ícone definido para “${name}”`);});
     groupIconPickerList.appendChild(button);
   });
   if(!matches.length)groupIconPickerList.innerHTML='<p class="group-icon-empty">Nenhum símbolo encontrado.</p>';
@@ -476,7 +476,8 @@ function render(){
     headingRow.append(heading);
     const setExpanded=expanded=>{heading.setAttribute("aria-expanded",String(expanded));heading.setAttribute("aria-label",`${expanded?"Recolher":"Expandir"} família ${family}`);inner.hidden=!expanded;section.classList.toggle("collapsed",!expanded);};
     setExpanded(!collapsedFamilies.has(collapseKey));heading.addEventListener("click",()=>{const expanded=heading.getAttribute("aria-expanded")==="true";if(expanded)collapsedFamilies.add(collapseKey);else collapsedFamilies.delete(collapseKey);setExpanded(!expanded);});
-    members.forEach(item=>{
+    const visibleCount=visibleByGroup.get(family)||18;
+    members.slice(0,visibleCount).forEach(item=>{
       const node=els.template.content.cloneNode(true),card=node.querySelector(".symbol-card"),main=node.querySelector(".symbol-main"),copy=node.querySelector(".copy-button"),download=node.querySelector(".download-button"),def=defaultVariant(item);
       card.dataset.symbolId=item.id;
       node.querySelector(".card-preview").innerHTML=previewMarkup(def?.finalSvg||def?.originalSvg||"");
@@ -504,7 +505,16 @@ function render(){
       }
       inner.appendChild(node);
     });
-    section.append(headingRow,inner);els.grid.appendChild(section);
+    section.append(headingRow,inner);
+    if(members.length>visibleCount){
+      const more=document.createElement("button");
+      more.type="button";more.className="secondary-button";
+      more.style.margin="12px auto 22px";more.style.display="block";
+      more.textContent=`Mostrar mais (${members.length-visibleCount} restantes)`;
+      more.addEventListener("click",()=>{visibleByGroup.set(family,visibleCount+48);render();});
+      section.append(more);
+    }
+    els.grid.appendChild(section);
   });
   const familiesForInputs=[...new Set(items.map(item=>item.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
   els.familyList.innerHTML="";organizerFamilyList.innerHTML="";
@@ -669,7 +679,7 @@ duplicateWarningDialog.addEventListener("cancel",event=>{event.preventDefault();
 groupIconDialogClose.addEventListener("click",closeGroupIconPicker);
 groupIconDialog.addEventListener("cancel",event=>{event.preventDefault();closeGroupIconPicker();});
 groupIconSearch.addEventListener("input",renderGroupIconPicker);
-groupIconClear.addEventListener("click",()=>{if(!editingGroupIconKey)return;const next={...groupIcons};delete next[editingGroupIconKey];if(!persistGroupIcons(next)){showToast("Não foi possível salvar o ícone do grupo");return;}groupIcons=next;render();closeGroupIconPicker();showToast(`Ícone removido de “${editingGroupIconName}”`);});
+groupIconClear.addEventListener("click",async ()=>{if(!editingGroupIconKey)return;const next={...groupIcons};delete next[editingGroupIconKey];if(!await persistGroupIcons(next)){showToast("Não foi possível salvar o ícone do grupo");return;}groupIcons=next;render();closeGroupIconPicker();showToast(`Ícone removido de “${editingGroupIconName}”`);});
 symbolActionsClose.addEventListener("click",closeSymbolActions);
 symbolActionsDialog.addEventListener("cancel",event=>{event.preventDefault();closeSymbolActions();});
 symbolActionsCopy.addEventListener("click",async()=>{const item=items.find(x=>x.id===symbolActionsItemId);if(!item)return;closeSymbolActions();const def=defaultVariant(item);if(item.variants.length>1)return openVariantChooser(item,"copy");await copyVariant(item,def);});
@@ -689,6 +699,7 @@ els.defaultVariant.addEventListener("change",()=>{if(!draft)return;if(els.defaul
 els.addVariant.addEventListener("click",addVariant); els.deleteVariant.addEventListener("click",deleteActiveVariant); els.deleteSymbol.addEventListener("click",deleteWholeSymbol); els.svg.addEventListener("input",()=>{updateEditor();updateLiveDuplicateWarning();}); els.previewColor.addEventListener("input",updateEditor); els.fixedColor.addEventListener("input",updateEditor); els.cleanup.addEventListener("change",updateEditor);
 document.querySelectorAll('input[name="colorMode"],input[name="sizeMode"]').forEach(x=>x.addEventListener("change",updateEditor)); els.strokeInput.addEventListener("input",()=>{els.strokeInput.dataset.override="true";els.strokeOutput.value=els.strokeInput.value;updateEditor();}); els.restoreStroke.addEventListener("click",()=>{els.strokeInput.dataset.override="false";updateEditor();});
 els.paste.addEventListener("click",pasteSvg); els.format.addEventListener("click",()=>{const parsed=parseSvg(els.svg.value);if(!parsed.ok)return showToast(parsed.error);els.svg.value=serializeSvg(parsed.root);updateEditor();updateLiveDuplicateWarning();}); els.copyOutput.addEventListener("click",async()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);try{await copyText(result.output);showToast(`SVG · ${els.variantLabel.value||"versão"} copiado`);}catch{showToast("Não foi possível copiar");}}); els.downloadOutput.addEventListener("click",()=>{const result=transformSvg(els.svg.value,optionsFromUI());if(!result.ok)return showToast(result.error);downloadSvg({name:els.name.value.trim()||"simbolo"},{label:els.variantLabel.value.trim()||"versao",finalSvg:result.output});});
-els.search.addEventListener("input",render); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;if(els.libraryMenu.hidden)libraryIconPreview.hidden=true;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target)){els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;}}); els.exportButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,EXPORT_ICON,"Exportar biblioteca"))return;exportLibrary();}); els.importButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,IMPORT_ICON,"Importar biblioteca"))return;els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
+let searchTimer;
+els.search.addEventListener("input",()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,120);}); els.clearSearch.addEventListener("click",()=>{els.search.value="";els.search.focus();render();}); els.libraryButton.addEventListener("click",e=>{e.stopPropagation();els.libraryMenu.hidden=!els.libraryMenu.hidden;if(els.libraryMenu.hidden)libraryIconPreview.hidden=true;}); document.addEventListener("click",e=>{if(!els.libraryMenu.hidden&&!els.libraryMenu.contains(e.target)){els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;}}); els.exportButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,EXPORT_ICON,"Exportar biblioteca"))return;exportLibrary();}); els.importButton.addEventListener("click",event=>{if(clickedLibraryIcon(event,IMPORT_ICON,"Importar biblioteca"))return;els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.importFile.click();}); els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importLibrary(file);}); els.aboutStorage.addEventListener("click",()=>{els.libraryMenu.hidden=true;libraryIconPreview.hidden=true;els.info.showModal();}); els.closeInfo.addEventListener("click",()=>els.info.close()); els.closeCopyDialog.addEventListener("click",()=>els.copyDialog.close()); els.editor.addEventListener("cancel",e=>{e.preventDefault();closeEditor();});
 
 els.count.textContent="Abrindo biblioteca de teste…"; initializePreview(); if("serviceWorker" in navigator && window.APP_CONFIG?.enableServiceWorker)navigator.serviceWorker.register("./sw.js").catch(()=>{});
